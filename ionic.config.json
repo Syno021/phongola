@@ -1,0 +1,7 @@
+{
+  "name": "Phongola",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
