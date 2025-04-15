@@ -25,3 +25,40 @@
 #container a {
   text-decoration: none;
 }
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+ion-card {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .product-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+  }
+}
+
+ion-spinner {
+  display: block;
+  margin: 2rem auto;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+  
+  span {
+    margin: 0 15px;
+    font-size: 1.2em;
+  }
+}

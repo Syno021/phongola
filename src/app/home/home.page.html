@@ -1,20 +1,41 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Blank
+      Products
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+  <div class="products-grid">
+    <ion-spinner *ngIf="loading"></ion-spinner>
+    
+    <ion-card *ngFor="let product of products">
+      <img [src]="product.image_url" [alt]="product.name" class="product-image"/>
+      <ion-card-header>
+        <ion-card-title>{{product.name}}</ion-card-title>
+        <ion-card-subtitle>{{product.category}}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{product.description}}</p>
+        <ion-text color="primary">
+          <h2>R {{product.price.toFixed(2)}}</h2>
+        </ion-text>
+        
+        <div class="quantity-controls">
+          <ion-button fill="clear" (click)="decreaseQuantity(product)">
+            <ion-icon name="remove-circle-outline"></ion-icon>
+          </ion-button>
+          <span>{{getQuantity(product)}}</span>
+          <ion-button fill="clear" (click)="increaseQuantity(product)">
+            <ion-icon name="add-circle-outline"></ion-icon>
+          </ion-button>
+        </div>
+        
+        <ion-button expand="block" (click)="addToCart(product)" [disabled]="getQuantity(product) === 0">
+          Add to Cart
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
   </div>
 </ion-content>

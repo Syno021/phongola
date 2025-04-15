@@ -1,0 +1,75 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Inventory Management</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-button expand="block" (click)="showForm = !showForm">
+    {{ showForm ? 'Hide Form' : 'Add New Product' }}
+  </ion-button>
+
+  <form *ngIf="showForm" [formGroup]="productForm" (ngSubmit)="onSubmit()">
+    <ion-list>
+      <ion-item>
+        <ion-label position="floating">Product Name</ion-label>
+        <ion-input formControlName="name" type="text"></ion-input>
+        <ion-note slot="error" *ngIf="productForm.get('name')?.touched && productForm.get('name')?.invalid">
+          Name is required
+        </ion-note>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Description</ion-label>
+        <ion-textarea formControlName="description" rows="3"></ion-textarea>
+        <ion-note slot="error" *ngIf="productForm.get('description')?.touched && productForm.get('description')?.invalid">
+          Description is required
+        </ion-note>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Price</ion-label>
+        <ion-input formControlName="price" type="number" min="0"></ion-input>
+        <ion-note slot="error" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.invalid">
+          Valid price is required
+        </ion-note>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Stock Quantity</ion-label>
+        <ion-input formControlName="stock_quantity" type="number" min="0"></ion-input>
+        <ion-note slot="error" *ngIf="productForm.get('stock_quantity')?.touched && productForm.get('stock_quantity')?.invalid">
+          Valid quantity is required
+        </ion-note>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="floating">Category</ion-label>
+        <ion-select formControlName="category">
+          <ion-select-option [value]="categories.LIQUIDS">Liquids</ion-select-option>
+          <ion-select-option [value]="categories.CLEANING_DETERGENTS">Cleaning Detergents</ion-select-option>
+          <ion-select-option [value]="categories.POWDER">Powder</ion-select-option>
+        </ion-select>
+        <ion-note slot="error" *ngIf="productForm.get('category')?.touched && productForm.get('category')?.invalid">
+          Category is required
+        </ion-note>
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Product Image</ion-label>
+        <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+      </ion-item>
+
+      <ion-item *ngIf="productForm.get('image_url')?.value">
+        <img [src]="productForm.get('image_url')?.value" style="max-width: 200px; margin: 10px auto;">
+      </ion-item>
+    </ion-list>
+
+    <div class="ion-padding">
+      <ion-button expand="block" type="submit" [disabled]="isSubmitting || productForm.invalid">
+        <ion-spinner *ngIf="isSubmitting"></ion-spinner>
+        <span *ngIf="!isSubmitting">Add Product</span>
+      </ion-button>
+    </div>
+  </form>
+</ion-content>
