@@ -1,11 +1,18 @@
 // cart.page.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Injector, NgZone, runInInjectionContext} from '@angular/core';
 import { CartService } from '../shared/services/cart.service';
-import { AlertController, ToastController } from '@ionic/angular';
+import { AlertController, ToastController, LoadingController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { Product } from '../shared/models/product';
 import { Subscription, take } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
 
+declare global {
+  interface Window {
+    PaystackPop: any;
+  }
+}
 
 interface CartItem {
   product_id: string;
@@ -22,9 +29,11 @@ interface CartItem {
   standalone: false,
 })
 export class CartPage implements OnInit, OnDestroy {
+  private paystackScriptLoaded: boolean = false;
   cartItems: CartItem[] = [];
   isLoading = true;
   private cartSubscription: Subscription | null = null;
+  userEmail: string = '';
 
   get subtotal(): number {
     return this.cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -54,16 +63,131 @@ export class CartPage implements OnInit, OnDestroy {
     private cartService: CartService,
     private alertController: AlertController,
     private toastController: ToastController,
-    private router: Router
+    private loadingController: LoadingController,
+    private router: Router,
+    private firestore: AngularFirestore,
+    private ngZone: NgZone,
+    private injector: Injector
   ) { }
 
   ngOnInit() {
     this.loadCartItems();
+    this.loadPaystackScript();
+    this.getCurrentUserEmail();
   }
 
   ngOnDestroy() {
     if (this.cartSubscription) {
       this.cartSubscription.unsubscribe();
+    }
+  }
+
+  loadPaystackScript() {
+    if (!this.paystackScriptLoaded) {
+      const script = document.createElement('script');
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.async = true;
+      script.onload = () => {
+        this.paystackScriptLoaded = true;
+        console.log('Paystack script loaded');
+      };
+      document.body.appendChild(script);
+    }
+  }
+
+  getCurrentUserEmail() {
+    this.cartService.getCurrentUser().then(user => {
+      if (user) {
+        this.userEmail = user.email || 'customer@email.com';
+      }
+    });
+  }
+
+  async makePayment() {
+    if (!this.paystackScriptLoaded) {
+      await this.presentToast('Paystack script not loaded yet. Please try again.');
+      return;
+    }
+
+    if (typeof window.PaystackPop === 'undefined') {
+      await this.presentToast('PaystackPop is not defined. Please refresh the page and try again.');
+      return;
+    }
+
+    // Check if user is logged in before proceeding
+    this.cartService.isLoggedIn().pipe(take(1)).subscribe(async isLoggedIn => {
+      if (!isLoggedIn) {
+        this.presentAuthAlert();
+        return;
+      }
+
+      // Generate a unique reference
+      const paymentReference = `PAY_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
+      
+      // Use the actual total amount from the cart
+      const amountInCents = Math.round(this.total * 100);
+
+      const handler = window.PaystackPop.setup({
+        key: environment.paystackTestPublicKey,
+        email: this.userEmail,
+        amount: amountInCents, // Amount in cents
+        currency: 'ZAR', // South African Rand
+        ref: paymentReference,
+        onClose: () => {
+          console.log('Payment window closed');
+        },
+        callback: (response: any) => {
+          console.log('Payment successful', response);
+          this.verifyTransaction(response.reference);
+        },
+        onError: async (error: any) => {
+          console.error('Payment error:', error);
+          await this.presentToast(`Payment error: ${error.message || 'Unknown error occurred'}`);
+        }
+      });
+
+      handler.openIframe();
+    });
+  }
+
+  async verifyTransaction(reference: string) {
+    const loading = await this.loadingController.create({
+      message: 'Verifying your payment...',
+      spinner: 'circles'
+    });
+    await loading.present();
+
+    try {
+      // Save payment details to Firestore
+      const paymentData = {
+        reference: reference,
+        amount: this.total,
+        user_email: this.userEmail,
+        status: 'successful',
+        created_at: new Date(),
+        items: this.cartItems.map(item => ({
+          product_id: item.product_id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        }))
+      };
+
+      // Save payment data to Firestore
+      await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+            return this.firestore.collection('payments').doc(reference).set(paymentData);
+        });
+      });
+      
+      // Now process the checkout with CartService
+      await this.processCheckout(reference);
+      
+      loading.dismiss();
+    } catch (error) {
+      loading.dismiss();
+      console.error('Error saving payment:', error);
+      this.presentToast('Payment verification failed. Please contact support.');
     }
   }
 
@@ -161,14 +285,8 @@ export class CartPage implements OnInit, OnDestroy {
       return;
     }
   
-    // Check if user is logged in
-    this.cartService.isLoggedIn().pipe(take(1)).subscribe(isLoggedIn => {
-      if (!isLoggedIn) {
-        this.presentAuthAlert();
-      } else {
-        this.processCheckout();
-      }
-    });
+    // Start the payment process
+    this.makePayment();
   }
 
   async presentAuthAlert() {
@@ -193,30 +311,39 @@ export class CartPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  async processCheckout() {
+  async processCheckout(paymentReference: string) {
     // Show loading indicator
-    const loading = await this.alertController.create({
+    const loading = await this.loadingController.create({
       message: 'Processing your order...',
-      backdropDismiss: false
+      spinner: 'circles'
     });
     await loading.present();
   
     try {
+      // Add payment reference to the cart items
+      const cartItemsWithPayment = this.cartItems.map(item => ({
+        ...item,
+        payment_reference: paymentReference
+      }));
+      
       // Send the full item details to the checkout method
-      const result = await this.cartService.checkout(this.cartItems);
+      const result = await this.cartService.checkout(cartItemsWithPayment);
       
       await loading.dismiss();
       
       // Show success message
       const alert = await this.alertController.create({
         header: 'Order Placed!',
-        message: 'Your order has been successfully placed.',
+        message: 'Your payment was successful and your order has been placed.',
         buttons: [{
           text: 'OK',
           handler: () => {
             // Navigate to order confirmation or home page
             this.router.navigate(['/order-confirmation'], { 
-              queryParams: { orderId: result.sale_id } 
+              queryParams: { 
+                orderId: result.sale_id,
+                paymentRef: paymentReference
+              } 
             });
           }
         }]

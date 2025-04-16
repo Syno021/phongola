@@ -95,7 +95,7 @@ export class CartService {
   }
 
   // Get current user
-  getCurrentUser() {
+  async getCurrentUser() {
     return this.ngZone.run(() => {
       return runInInjectionContext(this.injector, async () => {
         return this.auth.currentUser;
@@ -115,6 +115,9 @@ export class CartService {
 
         const batch = this.firestore.firestore.batch();
         
+        // Get payment reference from the first cart item (all items have same reference)
+        const paymentReference = cartItems[0]?.payment_reference || null;
+        
         // Create cart document with user information
         const cartDocRef = await this.ngZone.run(() => {
           return runInInjectionContext(this.injector, async () => {
@@ -127,11 +130,22 @@ export class CartService {
           user_id: user.uid,
           user_email: user.email,
           created_at: firebase.firestore.FieldValue.serverTimestamp(),
-          items: cartItems,
-          status: 'pending'
+          items: cartItems.map(item => ({
+            product_id: item.product_id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          })),
+          status: 'completed',
+          payment_reference: paymentReference
         };
         
         batch.set(cartDocRef.ref, cartData);
+        
+        // Calculate the actual total from cart items
+        const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const taxAmount = totalAmount * 0.15;
+        const grandTotal = totalAmount + taxAmount;
         
         // Create sale document using Sale interface
         const saleDocRef = await this.ngZone.run(() => {
@@ -141,11 +155,17 @@ export class CartService {
         });
         const saleId = saleDocRef.ref.id; // Get the ID from the reference
         
+        const userEmail = user.email || 'unknown@example.com'; // Fallback in case email is null or undefined
         const saleData: Sale = {
-          sale_id: saleId, // Generate a unique number based on timestamp
-          total_amount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+          sale_id: saleId,
+          total_amount: grandTotal,
           payment_method: PaymentMethod.ONLINE,
-          sale_date: new Date()
+          sale_date: new Date(),
+          payment_reference: paymentReference,
+          subtotal: totalAmount,
+          tax: taxAmount,
+          user_id: user.uid,
+          user_email: userEmail
         };
         
         batch.set(saleDocRef.ref, saleData);
@@ -184,7 +204,8 @@ export class CartService {
           productUpdates.push({
             product_id: item.product_id,
             old_quantity: currentStock,
-            number_of_items: item.quantity,
+            new_quantity: currentStock - item.quantity,
+            quantity_decreased: item.quantity,
           });
         }
         
@@ -197,6 +218,7 @@ export class CartService {
         
         batch.set(inventoryUpdateRef.ref, {
           sale_id: saleId,
+          payment_reference: paymentReference,
           updates: productUpdates,
           updated_at: firebase.firestore.FieldValue.serverTimestamp(),
           updated_by: user.uid
