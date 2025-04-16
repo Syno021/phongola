@@ -39,3 +39,21 @@
     </ion-card>
   </div>
 </ion-content>
+
+<ion-menu side="start" menuId="adminMenu" contentId="mainContent">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Admin Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content>
+    <ion-list>
+      <ion-item routerLink="/admin-inventory">
+        <ion-label>Inventory Management</ion-label>
+      </ion-item>
+      <ion-item routerLink="/admin-promotions">
+        <ion-label>Promotions Management</ion-label>
+      </ion-item>
+    </ion-list>
+  </ion-content>
+</ion-menu>

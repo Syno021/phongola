@@ -1,5 +1,6 @@
 import { Component, OnInit, Injector, NgZone } from '@angular/core';
 import { Product, ProductCategory } from '../shared/models/product';
+import { Promotion } from '../shared/models/promotion';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Router } from '@angular/router';
@@ -14,11 +15,18 @@ import { runInInjectionContext } from '@angular/core';
   standalone: false,
 })
 export class AdminInventoryPage implements OnInit {
+  selectedSegment = 'add';
   showForm = false;
   categories = ProductCategory;
   productForm: FormGroup;
+  editForm: FormGroup;
   selectedFile: File | null = null;
   isSubmitting = false;
+  products: Product[] = [];
+  filteredProducts: Product[] = [];
+  searchTerm = '';
+  editingProduct: Product | null = null;
+  promotions: Promotion[] = [];
 
   constructor(
     private auth: AngularFireAuth,
@@ -35,11 +43,76 @@ export class AdminInventoryPage implements OnInit {
       price: ['', [Validators.required, Validators.min(0)]],
       stock_quantity: ['', [Validators.required, Validators.min(0)]],
       category: ['', [Validators.required]],
-      image_url: ['']  // Made optional since it's handled separately
+      image_url: [''], // Made optional since it's handled separately
+      promotion_id: [null]
     });
+
+    this.editForm = this.formBuilder.group({
+      name: ['', [Validators.required]],
+      description: ['', [Validators.required]],
+      price: ['', [Validators.required, Validators.min(0)]],
+      stock_quantity: ['', [Validators.required, Validators.min(0)]],
+      category: ['', [Validators.required]],
+      image_url: [''],
+      promotion_id: [null]
+    });
+
+    this.loadPromotions();
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.loadProducts();
+    this.loadPromotions();
+  }
+
+  async loadProducts() {
+    try {
+      const snapshot = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
+          this.firestore.collection('products').get().toPromise()
+        )
+      );
+
+      this.products = snapshot?.docs.map(doc => doc.data() as Product) || [];
+      this.filterProducts();
+    } catch (error) {
+      console.error('Error loading products:', error);
+      this.showToast('Error loading products');
+    }
+  }
+
+  async loadPromotions() {
+    try {
+      const snapshot = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
+          this.firestore.collection('promotions').get().toPromise()
+        )
+      );
+      this.promotions = snapshot?.docs.map(doc => doc.data() as Promotion) || [];
+    } catch (error) {
+      console.error('Error loading promotions:', error);
+      this.showToast('Error loading promotions');
+    }
+  }
+
+  filterProducts() {
+    if (!this.searchTerm) {
+      this.filteredProducts = [...this.products];
+      return;
+    }
+
+    const searchLower = this.searchTerm.toLowerCase();
+    this.filteredProducts = this.products.filter(product =>
+      product.name.toLowerCase().includes(searchLower) ||
+      product.description.toLowerCase().includes(searchLower)
+    );
+  }
+
+  segmentChanged(event: any) {
+    if (event.detail.value === 'list') {
+      this.loadProducts();
+    }
+  }
 
   async onSubmit() {
     if (this.productForm.invalid) {
@@ -80,8 +153,13 @@ export class AdminInventoryPage implements OnInit {
         updated_at: new Date()
       };
 
-      await this.ngZone.run(() => 
-        runInInjectionContext(this.injector, () => 
+      // If no promotion is selected, ensure promotion_id is undefined
+      if (!product.promotion_id) {
+        delete product.promotion_id;
+      }
+
+      await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
           this.firestore.collection('products').doc(nextProductId.toString()).set(product)
         )
       );
@@ -113,6 +191,88 @@ export class AdminInventoryPage implements OnInit {
     }
   }
 
+  editProduct(product: Product) {
+    this.editingProduct = product;
+    this.editForm.patchValue({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      category: product.category,
+      image_url: product.image_url,
+      promotion_id: product.promotion_id || null
+    });
+  }
+
+  cancelEdit() {
+    this.editingProduct = null;
+    this.editForm.reset();
+  }
+
+  async saveEdit() {
+    if (this.editForm.invalid || !this.editingProduct) {
+      return;
+    }
+
+    this.isSubmitting = true;
+
+    try {
+      const updatedProduct = {
+        ...this.editingProduct,
+        ...this.editForm.value,
+        updated_at: new Date()
+      };
+
+      // If no promotion is selected, remove promotion_id
+      if (!updatedProduct.promotion_id) {
+        delete updatedProduct.promotion_id;
+      }
+
+      await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
+          this.firestore
+            .collection('products')
+            .doc(this.editingProduct!.product_id.toString())
+            .update(updatedProduct)
+        )
+      );
+
+      const index = this.products.findIndex(p => p.product_id === this.editingProduct!.product_id);
+      if (index !== -1) {
+        this.products[index] = updatedProduct;
+      }
+      this.filterProducts();
+
+      this.showToast('Product updated successfully');
+      this.cancelEdit();
+    } catch (error) {
+      console.error('Error updating product:', error);
+      this.showToast('Error updating product');
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  async deleteProduct(product: Product) {
+    try {
+      await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
+          this.firestore.collection('products').doc(product.product_id.toString()).delete()
+        )
+      );
+      this.products = this.products.filter(p => p.product_id !== product.product_id);
+      this.filterProducts();
+      this.showToast('Product deleted successfully');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      this.showToast('Error deleting product');
+    }
+  }
+
+  getPromotion(promotionId: number | undefined) {
+    return this.promotions.find(p => p.promotion_id === promotionId);
+  }
+
   private convertToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -125,7 +285,7 @@ export class AdminInventoryPage implements OnInit {
   private async showToast(message: string) {
     const toast = await this.toastController.create({
       message: message,
-      duration: 3000,  // Increased duration for better readability
+      duration: 3000, // Increased duration for better readability
       position: 'bottom',
       color: message.includes('Error') ? 'danger' : 'success'
     });

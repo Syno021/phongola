@@ -11,6 +11,7 @@ export interface Product {
     price: number;
     stock_quantity: number;
     category: ProductCategory;
+    promotion_id?:number;
     image_url: string;
     created_at: Date;
     updated_at: Date;

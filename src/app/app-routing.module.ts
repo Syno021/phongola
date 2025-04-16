@@ -19,6 +19,10 @@ const routes: Routes = [
     path: 'admin-inventory',
     loadChildren: () => import('./admin-inventory/admin-inventory.module').then( m => m.AdminInventoryPageModule)
   },
+  {
+    path: 'admin-promotions',
+    loadChildren: () => import('./admin-promotions/admin-promotions.module').then( m => m.AdminPromotionsPageModule)
+  },
 ];
 
 @NgModule({

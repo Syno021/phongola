@@ -1,0 +1,133 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Promotions Management</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-segment [(ngModel)]="selectedSegment">
+    <ion-segment-button value="add">
+      <ion-label>Add Promotion</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="list">
+      <ion-label>Promotions List</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <div *ngIf="selectedSegment === 'add'">
+    <ion-button expand="block" (click)="showForm = !showForm">
+      {{ showForm ? 'Hide Form' : 'Add New Promotion' }}
+    </ion-button>
+
+    <form *ngIf="showForm" [formGroup]="promotionForm" (ngSubmit)="onSubmit()">
+      <ion-list>
+        <ion-item>
+          <ion-label position="floating">Promotion Name</ion-label>
+          <ion-input formControlName="name" type="text"></ion-input>
+          <ion-note slot="error" *ngIf="promotionForm.get('name')?.touched && promotionForm.get('name')?.invalid">
+            Name is required
+          </ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Description</ion-label>
+          <ion-textarea formControlName="description" rows="3"></ion-textarea>
+          <ion-note slot="error" *ngIf="promotionForm.get('description')?.touched && promotionForm.get('description')?.invalid">
+            Description is required
+          </ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Discount Percentage</ion-label>
+          <ion-input formControlName="discount_percentage" type="number" min="0" max="100"></ion-input>
+          <ion-note slot="error" *ngIf="promotionForm.get('discount_percentage')?.touched && promotionForm.get('discount_percentage')?.invalid">
+            Valid percentage (0-100) is required
+          </ion-note>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">Start Date</ion-label>
+          <ion-input type="date" formControlName="start_date"></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="floating">End Date</ion-label>
+          <ion-input type="date" formControlName="end_date"></ion-input>
+        </ion-item>
+      </ion-list>
+
+      <div class="ion-padding">
+        <ion-button expand="block" type="submit" [disabled]="isSubmitting || promotionForm.invalid">
+          <ion-spinner *ngIf="isSubmitting"></ion-spinner>
+          <span *ngIf="!isSubmitting">Add Promotion</span>
+        </ion-button>
+      </div>
+    </form>
+  </div>
+
+  <div *ngIf="selectedSegment === 'list'">
+    <ion-list>
+      <ion-item *ngFor="let promotion of promotions">
+        <ion-label>
+          <h2>{{promotion.name}}</h2>
+          <p>{{promotion.description}}</p>
+          <p>Discount: {{promotion.discount_percentage}}%</p>
+          <p>Start: {{promotion.start_date | date}} | End: {{promotion.end_date | date}}</p>
+        </ion-label>
+        <ion-button slot="end" (click)="editPromotion(promotion)">Edit</ion-button>
+        <ion-button slot="end" color="danger" (click)="deletePromotion(promotion)">Delete</ion-button>
+      </ion-item>
+    </ion-list>
+  </div>
+</ion-content>
+
+<!-- Edit Promotion Modal -->
+<ion-modal [isOpen]="!!editingPromotion">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Edit Promotion</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cancelEdit()">Cancel</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <form *ngIf="editingPromotion" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <ion-list>
+          <ion-item>
+            <ion-label position="floating">Promotion Name</ion-label>
+            <ion-input formControlName="name" type="text"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Description</ion-label>
+            <ion-textarea formControlName="description" rows="3"></ion-textarea>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Discount Percentage</ion-label>
+            <ion-input formControlName="discount_percentage" type="number" min="0" max="100"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Start Date</ion-label>
+            <ion-input type="date" formControlName="start_date"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">End Date</ion-label>
+            <ion-input type="date" formControlName="end_date"></ion-input>
+          </ion-item>
+        </ion-list>
+
+        <div class="ion-padding">
+          <ion-button expand="block" type="submit" [disabled]="editForm.invalid || isSubmitting">
+            <ion-spinner *ngIf="isSubmitting"></ion-spinner>
+            <span *ngIf="!isSubmitting">Save Changes</span>
+          </ion-button>
+        </div>
+      </form>
+    </ion-content>
+  </ng-template>
+</ion-modal>
