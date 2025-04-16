@@ -35,3 +35,764 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+
+/*
+  PONGOLA CLEANING SUPPLIES
+  Global SCSS for Ionic Angular E-commerce Platform
+  
+  This file contains the primary styling for the Pongola luxury cleaning supplies
+  e-commerce and inventory management system.
+*/
+
+// Import Ionic theming capabilities
+@import "~@ionic/angular/css/core.css";
+@import "~@ionic/angular/css/normalize.css";
+@import "~@ionic/angular/css/structure.css";
+@import "~@ionic/angular/css/typography.css";
+
+// ==== THEME VARIABLES ====
+// Luxury color palette
+:root {
+  // Primary brand colors
+  --ion-color-primary: #2d4d46;        // Deep forest green
+  --ion-color-primary-rgb: 45, 77, 70;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #28443d;
+  --ion-color-primary-tint: #425d59;
+
+  // Secondary color - beige/gold tone
+  --ion-color-secondary: #d3c7b1;      // Soft gold/beige
+  --ion-color-secondary-rgb: 211, 199, 177;
+  --ion-color-secondary-contrast: #000000;
+  --ion-color-secondary-contrast-rgb: 0, 0, 0;
+  --ion-color-secondary-shade: #b9af9c;
+  --ion-color-secondary-tint: #d7cdb9;
+
+  // Tertiary color - slate gray
+  --ion-color-tertiary: #7a8d8d;       // Slate gray
+  --ion-color-tertiary-rgb: 122, 141, 141;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #6b7c7c;
+  --ion-color-tertiary-tint: #879898;
+
+  // Success color - soft green
+  --ion-color-success: #6a8d73;        // Soft green
+  --ion-color-success-rgb: 106, 141, 115;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #5d7c65;
+  --ion-color-success-tint: #799881;
+
+  // Warning color - soft amber
+  --ion-color-warning: #d6ae6a;        // Soft amber
+  --ion-color-warning-rgb: 214, 174, 106;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #bc995d;
+  --ion-color-warning-tint: #dab67a;
+
+  // Danger color - soft rust
+  --ion-color-danger: #b35a4d;         // Soft rust
+  --ion-color-danger-rgb: 179, 90, 77;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #9e4f44;
+  --ion-color-danger-tint: #bb6b5f;
+
+  // Dark color - deep charcoal
+  --ion-color-dark: #1d2b2b;           // Deep charcoal
+  --ion-color-dark-rgb: 29, 43, 43;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1a2626;
+  --ion-color-dark-tint: #344040;
+
+  // Medium color - medium gray
+  --ion-color-medium: #a0a8a8;         // Medium gray
+  --ion-color-medium-rgb: 160, 168, 168;
+  --ion-color-medium-contrast: #000000;
+  --ion-color-medium-contrast-rgb: 0, 0, 0;
+  --ion-color-medium-shade: #8d9494;
+  --ion-color-medium-tint: #aab1b1;
+
+  // Light color - off white
+  --ion-color-light: #f7f6f2;          // Off white
+  --ion-color-light-rgb: 247, 246, 242;
+  --ion-color-light-contrast: #000000;
+  --ion-color-light-contrast-rgb: 0, 0, 0;
+  --ion-color-light-shade: #d9d8d5;
+  --ion-color-light-tint: #f8f7f3;
+
+  // App-specific custom colors
+  --ion-color-cream: #f5f1e6;          // Cream background
+  --ion-color-gold: #c6b186;           // Gold accent
+  --ion-color-sage: #a6b2a6;           // Sage accent
+  --ion-color-charcoal: #333333;       // Text color
+
+  // Typography
+  --ion-font-family: 'Montserrat', sans-serif;
+  --pongola-heading-font: 'Playfair Display', serif;
+  --pongola-body-font: 'Montserrat', sans-serif;
+}
+
+// ==== GLOBAL STYLES ====
+
+// Add custom fonts
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+// Base typography styles
+body {
+  font-family: var(--pongola-body-font);
+  color: var(--ion-color-charcoal);
+  background-color: var(--ion-color-cream);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--pongola-heading-font);
+  letter-spacing: 0.03em;
+  font-weight: 500;
+  color: var(--ion-color-primary);
+}
+
+// ==== COMPONENT STYLES ==== 
+
+// Cards
+ion-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  background-color: #ffffff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  ion-card-header {
+    padding: 16px 20px;
+    
+    ion-card-title {
+      font-family: var(--pongola-heading-font);
+      font-size: 1.3rem;
+      color: var(--ion-color-primary);
+    }
+    
+    ion-card-subtitle {
+      font-size: 0.9rem;
+      color: var(--ion-color-tertiary);
+      margin-top: 4px;
+    }
+  }
+
+  ion-card-content {
+    padding: 16px 20px 20px;
+    line-height: 1.6;
+  }
+}
+
+// Product cards
+.product-card {
+  position: relative;
+  
+  .product-image-container {
+    height: 200px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    
+    img {
+      object-fit: contain;
+      height: 80%;
+      width: 80%;
+    }
+  }
+  
+  .price-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: var(--ion-color-primary);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .stock-indicator {
+    font-size: 0.85rem;
+    
+    &.in-stock {
+      color: var(--ion-color-success);
+    }
+    
+    &.low-stock {
+      color: var(--ion-color-warning);
+    }
+    
+    &.out-of-stock {
+      color: var(--ion-color-danger);
+    }
+  }
+}
+
+// Buttons
+ion-button {
+  --border-radius: 6px;
+  --box-shadow: none;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  height: 44px;
+  
+  &.button-solid {
+    --background: var(--ion-color-primary);
+    --color: white;
+    
+    &:hover {
+      --background: var(--ion-color-primary-shade);
+    }
+  }
+  
+  &.button-outline {
+    --border-color: var(--ion-color-primary);
+    --color: var(--ion-color-primary);
+    
+    &:hover {
+      --background: rgba(45, 77, 70, 0.05);
+    }
+  }
+  
+  &.luxury-button {
+    --background: linear-gradient(135deg, var(--ion-color-gold) 0%, var(--ion-color-secondary) 100%);
+    --color: var(--ion-color-dark);
+    --border-radius: 50px;
+    --padding-start: 24px;
+    --padding-end: 24px;
+    font-family: var(--pongola-heading-font);
+    text-transform: none;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    
+    &:hover {
+      --background: linear-gradient(135deg, var(--ion-color-secondary) 0%, var(--ion-color-gold) 100%);
+    }
+  }
+}
+
+// Toolbars 
+ion-toolbar {
+  --background: var(--ion-color-primary);
+  --color: white;
+  --min-height: 60px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  
+  ion-title {
+    font-family: var(--pongola-heading-font);
+    font-size: 1.4rem;
+    letter-spacing: 0.05em;
+  }
+  
+  &.luxury-header {
+    --background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-dark) 100%);
+    border-bottom: 1px solid rgba(211, 199, 177, 0.3);
+  }
+}
+
+// Content containers
+ion-content {
+  --background: var(--ion-color-cream);
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  
+  .content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+  }
+}
+
+// Lists
+ion-list {
+  background: transparent;
+  padding: 8px 0;
+  
+  ion-item {
+    --background: transparent;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    --border-color: rgba(122, 141, 141, 0.2);
+    --inner-padding-end: 0;
+    
+    &:hover {
+      --background: rgba(211, 199, 177, 0.1);
+    }
+    
+    ion-label {
+      margin: 8px 0;
+      
+      h2 {
+        font-weight: 500;
+        font-size: 1rem;
+        color: var(--ion-color-primary);
+        margin-bottom: 4px;
+      }
+      
+      p {
+        color: var(--ion-color-tertiary);
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// Form elements
+ion-input, ion-textarea, ion-select {
+  --background: white;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 0.6;
+  border: 1px solid rgba(122, 141, 141, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  
+  &:focus-within {
+    border-color: var(--ion-color-primary);
+    box-shadow: 0 0 0 2px rgba(45, 77, 70, 0.1);
+  }
+}
+
+ion-label {
+  color: var(--ion-color-dark);
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+// Search bar
+ion-searchbar {
+  --background: white;
+  --box-shadow: none;
+  --border-radius: 30px;
+  --placeholder-color: var(--ion-color-medium);
+  --placeholder-opacity: 0.6;
+  --icon-color: var(--ion-color-primary);
+  --color: var(--ion-color-primary);
+  padding: 4px;
+  height: 50px;
+  border: 1px solid rgba(122, 141, 141, 0.2);
+  margin-bottom: 16px;
+  
+  &:focus-within {
+    border-color: var(--ion-color-primary);
+    box-shadow: 0 0 0 2px rgba(45, 77, 70, 0.1);
+  }
+}
+
+// Segment controls
+ion-segment {
+  --background: transparent;
+  border-radius: 30px;
+  overflow: hidden;
+  margin: 16px 0;
+  
+  ion-segment-button {
+    --border-radius: 30px;
+    --background: transparent;
+    --background-checked: var(--ion-color-primary);
+    --color: var(--ion-color-primary);
+    --color-checked: white;
+    --indicator-color: transparent;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    height: 40px;
+    
+    &::part(indicator) {
+      display: none;
+    }
+  }
+}
+
+// Inventory specific styles
+.inventory-section {
+  .stock-level-indicator {
+    width: 100%;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+    
+    .level {
+      height: 100%;
+      border-radius: 4px;
+      
+      &.high {
+        background-color: var(--ion-color-success);
+      }
+      
+      &.medium {
+        background-color: var(--ion-color-warning);
+      }
+      
+      &.low {
+        background-color: var(--ion-color-danger);
+      }
+    }
+  }
+  
+  .data-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    
+    .card-title {
+      font-family: var(--pongola-heading-font);
+      font-size: 1.2rem;
+      color: var(--ion-color-primary);
+      margin-bottom: 16px;
+    }
+    
+    .data-value {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--ion-color-primary);
+      margin-bottom: 4px;
+    }
+    
+    .data-label {
+      font-size: 0.85rem;
+      color: var(--ion-color-tertiary);
+    }
+  }
+}
+
+// Shopping cart styles
+.cart-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(122, 141, 141, 0.2);
+  
+  .item-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 16px;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    img {
+      width: 80%;
+      height: 80%;
+      object-fit: contain;
+    }
+  }
+  
+  .item-details {
+    flex: 1;
+    
+    .item-name {
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--ion-color-primary);
+      margin-bottom: 4px;
+    }
+    
+    .item-price {
+      font-weight: 600;
+      color: var(--ion-color-tertiary);
+    }
+  }
+  
+  .item-quantity {
+    display: flex;
+    align-items: center;
+    
+    button {
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      background-color: rgba(211, 199, 177, 0.2);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ion-color-primary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: rgba(211, 199, 177, 0.4);
+      }
+    }
+    
+    .quantity {
+      font-weight: 500;
+      width: 40px;
+      text-align: center;
+    }
+  }
+}
+
+// Cart summary
+.cart-summary {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  
+  .summary-title {
+    font-family: var(--pongola-heading-font);
+    font-size: 1.2rem;
+    color: var(--ion-color-primary);
+    margin-bottom: 16px;
+  }
+  
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    
+    .label {
+      color: var(--ion-color-tertiary);
+    }
+    
+    .value {
+      font-weight: 500;
+      color: var(--ion-color-primary);
+    }
+    
+    &.total {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(122, 141, 141, 0.2);
+      
+      .label, .value {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+}
+
+// Product detail
+.product-detail {
+  .product-gallery {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    
+    .main-image {
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      
+      img {
+        max-height: 80%;
+        max-width: 80%;
+        object-fit: contain;
+      }
+    }
+    
+    .thumbnail-container {
+      display: flex;
+      gap: 8px;
+      
+      .thumbnail {
+        width: 70px;
+        height: 70px;
+        border-radius: 6px;
+        background-color: #f9f9f9;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 2px solid transparent;
+        
+        &.active {
+          border-color: var(--ion-color-primary);
+        }
+        
+        img {
+          max-height: 80%;
+          max-width: 80%;
+          object-fit: contain;
+        }
+      }
+    }
+  }
+  
+  .product-info {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    
+    .product-name {
+      font-family: var(--pongola-heading-font);
+      font-size: 1.6rem;
+      color: var(--ion-color-primary);
+      margin-bottom: 8px;
+    }
+    
+    .product-category {
+      color: var(--ion-color-tertiary);
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    
+    .product-price {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--ion-color-primary);
+      margin-bottom: 20px;
+    }
+    
+    .product-description {
+      color: var(--ion-color-charcoal);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 16px;
+    }
+  }
+}
+
+// ==== UTILITIES ==== 
+
+// Spacers
+.mb-4 { margin-bottom: 4px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.mb-32 { margin-bottom: 32px; }
+
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mt-32 { margin-top: 32px; }
+
+// Text utilities
+.text-primary { color: var(--ion-color-primary); }
+.text-secondary { color: var(--ion-color-secondary); }
+.text-tertiary { color: var(--ion-color-tertiary); }
+.text-success { color: var(--ion-color-success); }
+.text-warning { color: var(--ion-color-warning); }
+.text-danger { color: var(--ion-color-danger); }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.font-heading { font-family: var(--pongola-heading-font); }
+.font-body { font-family: var(--pongola-body-font); }
+
+.fw-light { font-weight: 300; }
+.fw-regular { font-weight: 400; }
+.fw-medium { font-weight: 500; }
+.fw-semibold { font-weight: 600; }
+.fw-bold { font-weight: 700; }
+
+// Flex utilities
+.d-flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.align-center { align-items: center; }
+.align-start { align-items: flex-start; }
+.align-end { align-items: flex-end; }
+
+// Responsive utilities
+@media (max-width: 576px) {
+  .hide-xs { display: none; }
+  
+  .product-detail {
+    .product-gallery .main-image {
+      height: 200px;
+    }
+  }
+}
+
+@media (min-width: 576px) and (max-width: 768px) {
+  .hide-sm { display: none; }
+}
+
+@media (min-width: 768px) and (max-width: 992px) {
+  .hide-md { display: none; }
+}
+
+@media (min-width: 992px) {
+  .hide-lg { display: none; }
+}
+
+// Custom animations
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-in-out;
+}
+
+// Loading spinner
+.luxury-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(211, 199, 177, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--ion-color-primary);
+  animation: spin 1s ease-in-out infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
