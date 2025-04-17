@@ -269,8 +269,16 @@ export class AdminInventoryPage implements OnInit {
     }
   }
 
-  getPromotion(promotionId: number | undefined) {
-    return this.promotions.find(p => p.promotion_id === promotionId);
+  getPromotion(promotionId: number | undefined): Promotion | null {
+    if (!promotionId) return null;
+    return this.promotions.find(p => p.promotion_id === promotionId) || null;
+  }
+
+  calculateDiscountedPrice(product: Product): number {
+    const promotion = this.getPromotion(product.promotion_id);
+    if (!promotion) return product.price;
+    
+    return product.price * (1 - promotion.discount_percentage / 100);
   }
 
   private convertToBase64(file: File): Promise<string> {

@@ -1,0 +1,31 @@
+.promotion-info {
+  margin: 8px 0;
+  padding: 8px;
+  background: #fff5f5;
+  border-radius: 4px;
+
+  .promo-name {
+    color: #e53e3e;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .promo-desc {
+    color: #4a5568;
+    font-size: 0.9em;
+    margin: 4px 0;
+  }
+
+  .discounted-price {
+    color: #e53e3e;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin: 4px 0;
+  }
+
+  .promo-dates {
+    color: #718096;
+    font-size: 0.8em;
+    margin: 4px 0;
+  }
+}

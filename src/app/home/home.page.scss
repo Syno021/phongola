@@ -1,3 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,900;1,400;1,900&display=swap');
+
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Playfair Display', serif;
+}
+
+ion-content {
+  --background: url(https://images.unsplash.com/photo-1495195129352-aeb325a55b65?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1776&q=80);
+  --background-size: cover;
+  --background-position: right;
+  --background-attachment: fixed;
+}
+
+#header {
+  margin: 20px;
+  
+  h1 {
+    text-align: center;
+    font-size: 3rem;
+  }
+  
+  p {
+    text-align: center;
+    font-size: 1.5rem;
+    font-style: italic;
+  }
+}
+
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  padding: 40px 20px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  margin-bottom: 60px;
+  
+  > div {
+    box-shadow: 0 15px 20px 0 rgba(0,0,0,0.5);
+  }
+}
+
+.card-image {
+  width: 400px;
+  height: 250px;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: bottom;
+  }
+}
+
+.card-text {
+  margin: -30px auto;
+  margin-bottom: -50px;
+  height: 300px;
+  width: 300px;
+  background-color: #1D1C20;
+  color: #fff;
+  padding: 20px;
+  
+  .quantity-controls {
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  ion-button {
+    --background: #970C0A;
+    margin-top: 10px;
+  }
+}
+
+.card-meal-type {
+  font-style: italic;
+}
+
+.card-title {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+  margin-top: 5px;
+}
+
+.card-body {
+  font-size: 1.25rem;
+}
+
+.card-price {
+  width: 100px;
+  height: 100px;
+  background-color: #970C0A;
+  color: #fff;
+  margin-left: auto;
+  font-size: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  &.promotion {
+    width: auto;
+    padding: 0 20px;
+    flex-direction: column;
+    
+    .original-price {
+      text-decoration: line-through;
+      font-size: 1.5rem;
+      opacity: 0.7;
+    }
+    
+    .discounted-price {
+      font-size: 2rem;
+    }
+    
+    .discount {
+      font-size: 1.2rem;
+    }
+  }
+}
+
 #container {
   text-align: center;
 
@@ -28,9 +159,15 @@
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 ion-card {
@@ -38,27 +175,171 @@ ion-card {
   height: 100%;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s ease;
+  border: none;
+  background: var(--ion-color-light);
+  
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(45, 77, 70, 0.12);
+  }
 
   .product-image {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
+    height: 240px;
+    object-fit: contain;
+    padding: 1.5rem;
+    background: white;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+
+  ion-card-header {
+    background: var(--ion-color-light);
+    padding: 1.5rem 1.5rem 0.5rem;
+
+    ion-card-title {
+      font-family: var(--pongola-heading-font);
+      font-size: 1.4rem;
+      color: var(--ion-color-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    ion-card-subtitle {
+      color: var(--ion-color-tertiary);
+      font-size: 1rem;
+      text-transform: capitalize;
+    }
+  }
+
+  ion-card-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    p {
+      color: var(--ion-color-tertiary);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
   }
 }
 
 ion-spinner {
   display: block;
-  margin: 2rem auto;
+  margin: 3rem auto;
+  --color: var(--ion-color-primary);
+  transform-origin: center;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .quantity-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 10px 0;
+  margin: 1.5rem 0;
+  
+  ion-button {
+    --padding-start: 0.8rem;
+    --padding-end: 0.8rem;
+    
+    ion-icon {
+      font-size: 1.4rem;
+    }
+  }
   
   span {
-    margin: 0 15px;
-    font-size: 1.2em;
+    margin: 0 1.5rem;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--ion-color-primary);
+    min-width: 2rem;
+    text-align: center;
+  }
+}
+
+.promotion-info {
+  margin: 1.5rem 0;
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+
+  h2 {
+    margin: 0.5rem 0;
+    font-family: var(--pongola-heading-font);
+    
+    &[style*="line-through"] {
+      font-size: 1.1rem;
+      opacity: 0.7;
+    }
+  }
+
+  ion-chip {
+    margin: 1rem auto;
+    --background: var(--ion-color-danger-tint);
+    --color: var(--ion-color-danger-contrast);
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+  }
+
+  p {
+    color: var(--ion-color-success);
+    font-weight: 500;
+    margin: 0.5rem 0;
+  }
+
+  small {
+    color: var(--ion-color-medium);
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+ion-button[expand="block"] {
+  margin: 1rem 0 0;
+  --border-radius: 8px;
+  --background: var(--ion-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  height: 48px;
+  --box-shadow: 0 4px 12px rgba(45, 77, 70, 0.2);
+  transition: all 0.3s ease;
+
+  &:hover {
+    --background: var(--ion-color-primary-shade);
+    --box-shadow: 0 6px 16px rgba(45, 77, 70, 0.3);
+  }
+
+  &[disabled] {
+    opacity: 0.7;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  ion-card .product-image {
+    height: 200px;
   }
 }

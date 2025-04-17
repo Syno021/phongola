@@ -102,11 +102,15 @@
         <ion-label>
           <h2>{{product.name}}</h2>
           <p>{{product.description}}</p>
-          <p>Price: ${{product.price}} | Stock: {{product.stock_quantity}}</p>
-          <p *ngIf="getPromotion(product.promotion_id)">
-            Promotion: {{getPromotion(product.promotion_id)?.name}} 
-            ({{getPromotion(product.promotion_id)?.discount_percentage}}% off)
-          </p>
+          <p>Original Price: R{{product.price}}</p>
+          <div *ngIf="getPromotion(product.promotion_id)" class="promotion-info">
+            <p class="promo-name">Promotion: {{getPromotion(product.promotion_id)?.name}}</p>
+            <p class="promo-desc">{{getPromotion(product.promotion_id)?.description}}</p>
+            <p>Discount: {{getPromotion(product.promotion_id)?.discount_percentage}}% off</p>
+            <p class="discounted-price">Discounted Price: R{{calculateDiscountedPrice(product) | number:'1.2-2'}}</p>
+            <p class="promo-dates">Valid: {{getPromotion(product.promotion_id)?.start_date | date}} - {{getPromotion(product.promotion_id)?.end_date | date}}</p>
+          </div>
+          <p>Stock: {{product.stock_quantity}}</p>
         </ion-label>
         <ion-button slot="end" (click)="editProduct(product)">Edit</ion-button>
         <ion-button slot="end" color="danger" (click)="deleteProduct(product)">Delete</ion-button>

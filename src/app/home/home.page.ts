@@ -1,6 +1,7 @@
 // HomePage Component - Updated implementation
 import { Component, OnInit, Injector, NgZone, OnDestroy } from '@angular/core';
 import { Product, ProductCategory } from '../shared/models/product';
+import { Promotion } from '../shared/models/promotion';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Router } from '@angular/router';
@@ -20,6 +21,7 @@ import { Subscription } from 'rxjs';
 })
 export class HomePage implements OnInit, OnDestroy {
   products: Product[] = [];
+  promotions: Promotion[] = [];
   loading: boolean = true;
   cartItemCount = 0;
   // Temporary buffer for items being modified in the UI before adding to cart
@@ -40,6 +42,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     await this.loadProducts();
+    await this.loadPromotions();
     
     // Check if user is already logged in
     this.auth.authState.subscribe(async (user) => {
@@ -83,6 +86,30 @@ export class HomePage implements OnInit, OnDestroy {
       console.error('Error loading products:', error);
       this.loading = false;
     }
+  }
+
+  private async loadPromotions() {
+    try {
+      const snapshot = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () =>
+          this.firestore.collection('promotions').get().toPromise()
+        )
+      );
+      this.promotions = snapshot?.docs.map(doc => doc.data() as Promotion) || [];
+    } catch (error) {
+      console.error('Error loading promotions:', error);
+    }
+  }
+
+  getPromotion(promotionId: number | undefined): Promotion | null {
+    if (!promotionId) return null;
+    return this.promotions.find(p => p.promotion_id === promotionId) || null;
+  }
+
+  calculateDiscountedPrice(product: Product): number {
+    const promotion = this.getPromotion(product.promotion_id);
+    if (!promotion) return product.price;
+    return product.price * (1 - promotion.discount_percentage / 100);
   }
 
   increaseQuantity(product: Product) {
