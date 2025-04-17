@@ -12,7 +12,9 @@ export const environment = {
     messagingSenderId: "380650783179",
     appId: "1:380650783179:web:b476b04c87e5ac7a3cf64e",
     measurementId: "G-F0QJWL3JHG"
-  }
+  },
+
+  paystackTestPublicKey: 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe43'
 };
 
 /*

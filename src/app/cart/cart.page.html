@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Your Shopping Cart</ion-title>
+    <ion-buttons slot="end">
+      <ion-button *ngIf="cartItems.length > 0" (click)="clearCart()">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Loading indicator -->
+  <div *ngIf="isLoading" class="ion-padding ion-text-center">
+    <ion-spinner></ion-spinner>
+    <p>Loading your cart...</p>
+  </div>
+
+  <!-- Empty cart message -->
+  <div *ngIf="!isLoading && cartItems.length === 0" class="empty-cart ion-padding ion-text-center">
+    <ion-icon name="cart-outline" size="large"></ion-icon>
+    <h2>Your cart is empty</h2>
+    <p>Looks like you haven't added any products to your cart yet.</p>
+    <ion-button expand="block" (click)="continueShopping()">
+      <ion-icon name="bag-outline" slot="start"></ion-icon>
+      Continue Shopping
+    </ion-button>
+  </div>
+
+  <!-- Cart Items -->
+  <div *ngIf="!isLoading && cartItems.length > 0" class="ion-padding">
+    <h2 class="section-title">Cart Items ({{cartItems.length}})</h2>
+    
+    <ion-card *ngFor="let item of cartItems" class="cart-item-card">
+      <ion-card-content>
+        <div class="cart-item-layout">
+          <ion-thumbnail class="cart-item-img">
+            <ion-img [src]="item.image" alt="{{item.name}}"></ion-img>
+          </ion-thumbnail>
+          
+          <div class="cart-item-details">
+            <h3>{{item.name}}</h3>
+            <p class="item-price">{{formatCurrency(item.price)}}</p>
+          </div>
+          
+          <div class="cart-item-actions">
+            <div class="quantity-control">
+              <ion-button fill="clear" color="medium" size="small" (click)="updateQuantity(item, -1)">
+                <ion-icon name="remove-circle-outline"></ion-icon>
+              </ion-button>
+              <span class="quantity">{{item.quantity}}</span>
+              <ion-button fill="clear" color="medium" size="small" (click)="updateQuantity(item, 1)">
+                <ion-icon name="add-circle-outline"></ion-icon>
+              </ion-button>
+            </div>
+            <div class="item-total">
+              {{getItemTotal(item)}}
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Cart Summary -->
+    <ion-card class="summary-card">
+      <ion-card-header>
+        <ion-card-title>Order Summary</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div class="summary-item">
+          <span>Subtotal</span>
+          <span>{{formattedSubtotal}}</span>
+        </div>
+        <div class="summary-item">
+          <span>Tax (15%)</span>
+          <span>{{formattedTax}}</span>
+        </div>
+        <div class="divider"></div>
+        <div class="summary-item total">
+          <span>Total</span>
+          <span>{{formattedTotal}}</span>
+        </div>
+        
+        <ion-button expand="block" class="checkout-button" (click)="proceedToCheckout()">
+          <ion-icon name="card-outline" slot="start"></ion-icon>
+          Proceed to Checkout
+        </ion-button>
+        
+        <ion-button expand="block" fill="outline" class="continue-button" (click)="continueShopping()">
+          <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+          Continue Shopping
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

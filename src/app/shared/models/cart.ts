@@ -1,7 +1,7 @@
   export interface Cart {
-    cart_id: number;
-    user_id: number;
-    product_id: number;
+    cart_id: any;
+    user_id: any;
+    product_id: any;
     quantity: number;
     added_at: Date;
   }

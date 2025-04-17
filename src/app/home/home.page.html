@@ -3,6 +3,12 @@
     <ion-title>
       Products
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="navigateToCart()">
+        <ion-icon name="cart-outline"></ion-icon>
+        <ion-badge *ngIf="cartItemCount > 0" color="danger">{{cartItemCount}}</ion-badge>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

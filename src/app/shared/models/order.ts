@@ -1,9 +1,9 @@
 export interface Order {
-    order_id: number;
-    user_id: number;
-    total_amount: number;
+    order_id: any;
+    user_id: any;
+    total_amount: any;
     status: OrderStatus;
-    created_at: Date;
+    created_at: any;
     updated_at: Date;
   }
 

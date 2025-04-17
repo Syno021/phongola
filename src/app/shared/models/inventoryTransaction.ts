@@ -6,8 +6,8 @@ enum TransactionType {
   }
 
   export interface InventoryTransaction {
-    transaction_id: number;
-    product_id: number;
+    transaction_id: any;
+    product_id: any;
     quantity_change: number;
     transaction_type: TransactionType;
     transaction_date: Date;

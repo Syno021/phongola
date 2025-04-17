@@ -62,15 +62,29 @@ export class LoginComponent implements OnInit {
   private async checkUserRoleAndNavigate(userId: string) {
     await this.ngZone.run(() => {
       return runInInjectionContext(this.injector, async () => {
-        const userDoc = await this.firestore.collection('users').doc(userId).get().toPromise();
-        if (userDoc && userDoc.exists) {
-          const userData = userDoc.data() as User;
-          await this.modalCtrl.dismiss();
-          if (userData.role === UserRole.ADMIN) {
-            await this.router.navigate(['/admin-inventory']);
-          } else {
-            await this.router.navigate(['/home']);
+        try {
+          const userDoc = await this.firestore.collection('users').doc(userId).get().toPromise();
+          
+          if (userDoc && userDoc.exists) {
+            const userData = userDoc.data() as User;
+            
+            // Force dismiss with a boolean result and log it
+            const dismissed = await this.modalCtrl.dismiss(true, 'login-success');
+            console.log('Modal dismissed:', dismissed);
+            
+            // Add a small delay before navigation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Then navigate after modal is dismissed
+            if (userData.role === UserRole.ADMIN) {
+              await this.router.navigate(['/admin-inventory']);
+            } else {
+              await this.router.navigate(['/home']);
+            }
           }
+        } catch (error) {
+          console.error('Error during navigation:', error);
+          this.showToast('Navigation error: ' + (error as any).message);
         }
       });
     });
