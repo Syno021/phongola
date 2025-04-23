@@ -34,35 +34,27 @@
   <div *ngIf="!isLoading && cartItems.length > 0" class="ion-padding">
     <h2 class="section-title">Cart Items ({{cartItems.length}})</h2>
     
-    <ion-card *ngFor="let item of cartItems" class="cart-item-card">
-      <ion-card-content>
-        <div class="cart-item-layout">
-          <ion-thumbnail class="cart-item-img">
-            <ion-img [src]="item.imageurl" alt="{{item.name}}"></ion-img>
-          </ion-thumbnail>
-          
-          <div class="cart-item-details">
-            <h3>{{item.name}}</h3>
-            <p class="item-price">{{formatCurrency(item.price)}}</p>
-          </div>
-          
-          <div class="cart-item-actions">
-            <div class="quantity-control">
-              <ion-button fill="clear" color="medium" size="small" (click)="updateQuantity(item, -1)">
-                <ion-icon name="remove-circle-outline"></ion-icon>
-              </ion-button>
-              <span class="quantity">{{item.quantity}}</span>
-              <ion-button fill="clear" color="medium" size="small" (click)="updateQuantity(item, 1)">
-                <ion-icon name="add-circle-outline"></ion-icon>
-              </ion-button>
-            </div>
-            <div class="item-total">
-              {{getItemTotal(item)}}
-            </div>
-          </div>
-        </div>
-      </ion-card-content>
-    </ion-card>
+    <ion-list>
+      <ion-item *ngFor="let item of cartItems">
+        <ion-thumbnail slot="start">
+          <ion-img [src]="item.image_url" alt="Product image"></ion-img>
+        </ion-thumbnail>
+        <ion-label>
+          <h2>{{item.name}}</h2>
+          <p>{{formatCurrency(item.price)}}</p>
+        </ion-label>
+        <ion-row class="ion-align-items-center">
+          <ion-button fill="clear" (click)="updateQuantity(item, -1)">
+            <ion-icon name="remove-circle-outline"></ion-icon>
+          </ion-button>
+          <ion-text>{{item.quantity}}</ion-text>
+          <ion-button fill="clear" (click)="updateQuantity(item, 1)">
+            <ion-icon name="add-circle-outline"></ion-icon>
+          </ion-button>
+        </ion-row>
+        <ion-note slot="end">{{getItemTotal(item)}}</ion-note>
+      </ion-item>
+    </ion-list>
 
     <!-- Cart Summary -->
     <ion-card class="summary-card">

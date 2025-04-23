@@ -18,7 +18,7 @@ interface CartItem {
   product_id: string;
   name: string;
   price: number;
-  imageurl: string;
+  image_url: string;
   quantity: number;
 }
 
@@ -191,24 +191,27 @@ export class CartPage implements OnInit, OnDestroy {
     }
   }
 
-  private loadCartItems() {
+  private async loadCartItems() {
     this.isLoading = true;
-    // Subscribe to cart updates
-    this.cartSubscription = this.cartService.cartItems$.subscribe(cartMap => {
-      // Convert the cart map to an array of cart items
-      // In a real implementation, you would likely need to fetch product details from a service
-      // For now, we'll simulate with the data we have
-      this.cartItems = Array.from(cartMap.entries()).map(([productId, quantity]) => {
-        // In a real app, you would fetch these details from a product service
-        // For demo purposes, we'll create placeholder data
+    this.cartSubscription = this.cartService.cartItems$.subscribe(async cartMap => {
+      // Get complete product details for each item in cart
+      const productPromises = Array.from(cartMap.entries()).map(async ([productId, quantity]) => {
+        const productDoc = await this.ngZone.run(() => {
+          return runInInjectionContext(this.injector, async () => {
+            return this.firestore.doc(`products/${productId}`).get().toPromise();
+          });
+        });
+        const productData = productDoc?.data() as Product;
         return {
           product_id: productId,
-          name: `Product ${productId.substring(0, 5)}...`, // Placeholder - replace with actual data
-          price: 99.99, // Placeholder - replace with actual data
-          imageurl: 'assets/placeholder.jpg', // Placeholder - replace with actual data
+          name: productData?.name || 'Unknown Product',
+          price: productData?.price || 0,
+          image_url: productData?.image_url || 'assets/placeholder.jpg',
           quantity: quantity
         } as CartItem;
       });
+
+      this.cartItems = await Promise.all(productPromises);
       this.isLoading = false;
     });
   }
