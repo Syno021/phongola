@@ -49,7 +49,15 @@ export class LoginComponent implements OnInit {
         return runInInjectionContext(this.injector, async () => {
           const provider = new GoogleAuthProvider();
           const result = await this.auth.signInWithPopup(provider);
+          
           if (result.user) {
+            // First dismiss the modal
+            await this.modalCtrl.dismiss(true, 'login-success');
+            
+            // Small delay to ensure modal dismissal completes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Then check role and navigate
             await this.checkUserRoleAndNavigate(result.user.uid);
           }
         });
@@ -68,18 +76,11 @@ export class LoginComponent implements OnInit {
           if (userDoc && userDoc.exists) {
             const userData = userDoc.data() as User;
             
-            // Force dismiss with a boolean result and log it
-            const dismissed = await this.modalCtrl.dismiss(true, 'login-success');
-            console.log('Modal dismissed:', dismissed);
-            
-            // Add a small delay before navigation
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Then navigate after modal is dismissed
             if (userData.role === UserRole.ADMIN) {
               await this.router.navigate(['/admin-inventory']);
             } else {
               await this.router.navigate(['/home']);
+              window.location.reload();
             }
           }
         } catch (error) {

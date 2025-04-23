@@ -18,7 +18,7 @@ interface CartItem {
   product_id: string;
   name: string;
   price: number;
-  image: string;
+  imageurl: string;
   quantity: number;
 }
 
@@ -205,7 +205,7 @@ export class CartPage implements OnInit, OnDestroy {
           product_id: productId,
           name: `Product ${productId.substring(0, 5)}...`, // Placeholder - replace with actual data
           price: 99.99, // Placeholder - replace with actual data
-          image: 'assets/placeholder.jpg', // Placeholder - replace with actual data
+          imageurl: 'assets/placeholder.jpg', // Placeholder - replace with actual data
           quantity: quantity
         } as CartItem;
       });
