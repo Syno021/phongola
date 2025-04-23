@@ -33,8 +33,46 @@ export class RegisterPage implements OnInit {
 
   ngOnInit() { }
 
+  private validatePassword(password: string): { isValid: boolean; message: string } {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+      return { isValid: false, message: 'Password must be at least 8 characters long' };
+    }
+    if (!hasUpperCase) {
+      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+    if (!hasLowerCase) {
+      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!hasNumbers) {
+      return { isValid: false, message: 'Password must contain at least one number' };
+    }
+    if (!hasSpecialChar) {
+      return { isValid: false, message: 'Password must contain at least one special character' };
+    }
+
+    return { isValid: true, message: '' };
+  }
+
   async onSubmit() {
     try {
+      // Validate password first
+      const passwordValidation = this.validatePassword(this.registerData.password);
+      if (!passwordValidation.isValid) {
+        const errorToast = await this.toastController.create({
+          message: passwordValidation.message,
+          duration: 3000,
+          color: 'danger'
+        });
+        await errorToast.present();
+        return;
+      }
+
       const toast = await this.ngZone.run(() => {
         return runInInjectionContext(this.injector, async () => {
           // Create authentication user
