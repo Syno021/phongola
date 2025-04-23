@@ -4,6 +4,9 @@
       Pongola Detergents
     </ion-title>
     <ion-buttons slot="end">
+      <ion-button (click)="openModal()" class="cart-button">
+        LOGIN
+      </ion-button>
       <ion-button (click)="navigateToCart()" class="cart-button">
         <ion-icon name="cart-outline"></ion-icon>
         <ion-badge *ngIf="cartItemCount > 0" color="danger" class="animate-fade-in">{{cartItemCount}}</ion-badge>
@@ -11,6 +14,39 @@
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
+
+<ion-toolbar class="category-toolbar">
+  <ion-segment scrollable>
+    <ion-segment-button *ngFor="let category of categories" (click)="selectCategory(category)">
+      <ion-label>{{category | titlecase}}</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+</ion-toolbar>
+
+<ion-toolbar>
+  <div class="search-filters-container">
+    <ion-searchbar class="search-bar" placeholder="Search products..." (ionChange)="searchProducts($event)" [debounce]="300"></ion-searchbar>
+    <ion-item class="filter-item">
+      <ion-label>Price Range</ion-label>
+      <ion-select [(ngModel)]="selectedPriceRange" (ionChange)="applyFilters()">
+        <ion-select-option value="all">All Prices</ion-select-option>
+        <ion-select-option value="0-50">R0 - R50</ion-select-option>
+        <ion-select-option value="51-100">R51 - R100</ion-select-option>
+        <ion-select-option value="101-200">R101 - R200</ion-select-option>
+        <ion-select-option value="201+">R201+</ion-select-option>
+      </ion-select>
+    </ion-item>
+    <ion-item class="filter-item">
+      <ion-label>Size</ion-label>
+      <ion-select [(ngModel)]="selectedSize" (ionChange)="applyFilters()" multiple="true">
+        <ion-select-option value="1L">1L</ion-select-option>
+        <ion-select-option value="2L">2L</ion-select-option>
+        <ion-select-option value="5L">5L</ion-select-option>
+        <ion-select-option value="25L">25L</ion-select-option>
+      </ion-select>
+    </ion-item>
+  </div>
+</ion-toolbar>
 
 <ion-content [fullscreen]="true">
   <div id="header">
@@ -21,36 +57,42 @@
   <div class="container">
     <ion-spinner *ngIf="loading" class="luxury-spinner"></ion-spinner>
     
-    <div class="card" *ngFor="let product of products">
-      <div class="card-image">
-        <img [src]="product.image_url" [alt]="product.name"/>
-      </div>
-      <div class="card-text">
-        <p class="card-meal-type">{{product.category}}</p>
-        <h2 class="card-title">{{product.name}}</h2>
-        <p class="card-body">{{product.description}}</p>
-        
-        <div class="quantity-controls">
-          <ion-button fill="clear" (click)="decreaseQuantity(product)">
-            <ion-icon name="remove-circle-outline"></ion-icon>
-          </ion-button>
-          <span>{{getQuantity(product)}}</span>
-          <ion-button fill="clear" (click)="increaseQuantity(product)">
-            <ion-icon name="add-circle-outline"></ion-icon>
+    <div *ngIf="!selectedCategory" class="select-category-message">
+      <h2>Please select a category to view products</h2>
+    </div>
+
+    <div class="products-container" *ngIf="selectedCategory">
+      <div class="card" *ngFor="let product of products">
+        <div class="card-image">
+          <img [src]="product.image_url" [alt]="product.name"/>
+        </div>
+        <div class="card-text">
+          <p class="card-meal-type">{{product.category}}</p>
+          <h2 class="card-title">{{product.name}}</h2>
+          <p class="card-body">{{product.description}}</p>
+          
+          <div class="quantity-controls">
+            <ion-button fill="clear" (click)="decreaseQuantity(product)">
+              <ion-icon name="remove-circle-outline"></ion-icon>
+            </ion-button>
+            <span>{{getQuantity(product)}}</span>
+            <ion-button fill="clear" (click)="increaseQuantity(product)">
+              <ion-icon name="add-circle-outline"></ion-icon>
+            </ion-button>
+          </div>
+          
+          <ion-button expand="block" (click)="addToCart(product)" [disabled]="getQuantity(product) === 0">
+            Add to Cart
           </ion-button>
         </div>
-        
-        <ion-button expand="block" (click)="addToCart(product)" [disabled]="getQuantity(product) === 0">
-          Add to Cart
-        </ion-button>
-      </div>
-      <div class="card-price" *ngIf="!getPromotion(product.promotion_id)">
-        R{{product.price.toFixed(2)}}
-      </div>
-      <div class="card-price promotion" *ngIf="getPromotion(product.promotion_id)">
-        <span class="original-price">R{{product.price.toFixed(2)}}</span>
-        <span class="discounted-price">R{{calculateDiscountedPrice(product).toFixed(2)}}</span>
-        <span class="discount">{{getPromotion(product.promotion_id)?.discount_percentage}}% OFF</span>
+        <div class="card-price" *ngIf="!getPromotion(product.promotion_id)">
+          R{{product.price.toFixed(2)}}
+        </div>
+        <div class="card-price promotion" *ngIf="getPromotion(product.promotion_id)">
+          <span class="original-price">R{{product.price.toFixed(2)}}</span>
+          <span class="discounted-price">R{{calculateDiscountedPrice(product).toFixed(2)}}</span>
+          <span class="discount">{{getPromotion(product.promotion_id)?.discount_percentage}}% OFF</span>
+        </div>
       </div>
     </div>
   </div>

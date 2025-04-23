@@ -24,9 +24,15 @@ export class HomePage implements OnInit, OnDestroy {
   promotions: Promotion[] = [];
   loading: boolean = true;
   cartItemCount = 0;
+  selectedCategory: ProductCategory | null = null;
+  categories = Object.values(ProductCategory);
   // Temporary buffer for items being modified in the UI before adding to cart
   tempQuantities = new Map<string, number>();
   private cartSubscription: Subscription | null = null;
+  private allProducts: Product[] = [];
+  searchTerm: string = '';
+  selectedPriceRange: string = 'all';
+  selectedSize: string[] = [];
 
   constructor(
     private modalCtrl: ModalController,
@@ -78,7 +84,11 @@ export class HomePage implements OnInit, OnDestroy {
       await this.ngZone.run(() => {
         return runInInjectionContext(this.injector, async () => {
           const snapshot = await this.firestore.collection('products').get().toPromise();
-          this.products = snapshot?.docs.map(doc => ({ ...(doc.data() as object), product_id: doc.id })) as Product[];
+          const allProducts = snapshot?.docs.map(doc => ({ ...(doc.data() as object), product_id: doc.id })) as Product[];
+          this.allProducts = allProducts;
+          this.products = this.selectedCategory 
+            ? allProducts.filter(p => p.category === this.selectedCategory)
+            : allProducts;
           this.loading = false;
         });
       });
@@ -156,5 +166,63 @@ export class HomePage implements OnInit, OnDestroy {
 
   navigateToCart() {
     this.router.navigate(['/cart']);
+  }
+
+  selectCategory(category: ProductCategory) {
+    this.selectedCategory = category;
+    this.applyFilters();
+  }
+
+  async openModal() {
+    const modal = await this.modalCtrl.create({
+      component: LoginComponent,
+      backdropDismiss: false,
+      cssClass: 'login-modal'
+    });
+    
+    await modal.present();
+    
+    const { data, role } = await modal.onDidDismiss();
+    console.log('Modal dismissed with data:', data, 'and role:', role);
+  }
+
+  searchProducts(event: any) {
+    this.searchTerm = event.detail.value.toLowerCase();
+    this.applyFilters();
+  }
+
+  applyFilters() {
+    // Start with all products if no category selected, otherwise filter by category
+    let filteredProducts = this.selectedCategory 
+      ? this.allProducts.filter(p => p.category === this.selectedCategory)
+      : [...this.allProducts];
+
+    // Apply search term filter
+    if (this.searchTerm) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.name.toLowerCase().includes(this.searchTerm)
+      );
+    }
+
+    // Apply price range filter
+    if (this.selectedPriceRange !== 'all') {
+      const [min, max] = this.selectedPriceRange.split('-').map(n => parseInt(n));
+      filteredProducts = filteredProducts.filter(p => {
+        const price = this.calculateDiscountedPrice(p);
+        if (this.selectedPriceRange === '201+') {
+          return price > 200;
+        }
+        return price >= min && price <= max;
+      });
+    }
+
+    // Apply size filter
+    // if (this.selectedSize.length > 0) {
+    //   filteredProducts = filteredProducts.filter(p => 
+    //     this.selectedSize.some(size => p.size === size)
+    //   );
+    // }
+
+    this.products = filteredProducts;
   }
 }

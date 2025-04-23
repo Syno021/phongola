@@ -102,4 +102,9 @@ export class LoginComponent implements OnInit {
   dismiss() {
     this.modalCtrl.dismiss();
   }
+
+  async goToRegister() {
+    await this.modalCtrl.dismiss();
+    this.router.navigate(['/register']);
+  }
 }
