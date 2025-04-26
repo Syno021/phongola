@@ -1,9 +1,11 @@
 import { Component, OnInit, Injector, NgZone } from '@angular/core';
 import { Promotion } from '../shared/models/promotion';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { runInInjectionContext } from '@angular/core';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-admin-promotions',
@@ -21,7 +23,9 @@ export class AdminPromotionsPage implements OnInit {
   editingPromotion: Promotion | null = null;
 
   constructor(
+    private auth: AngularFireAuth,
     private firestore: AngularFirestore,
+    private router: Router,
     private toastController: ToastController,
     private formBuilder: FormBuilder,
     private ngZone: NgZone,
@@ -195,5 +199,14 @@ export class AdminPromotionsPage implements OnInit {
       color: message.includes('Error') ? 'danger' : 'success'
     });
     toast.present();
+  }
+
+  async logout() {
+    try {
+      await this.auth.signOut();
+      this.router.navigate(['/']);
+    } catch (error) {
+      this.showToast('Error logging out');
+    }
   }
 }

@@ -225,4 +225,22 @@ export class HomePage implements OnInit, OnDestroy {
 
     this.products = filteredProducts;
   }
+
+  async presentToast(message: string, duration: number = 2000) {
+    const toast = await this.toastController.create({
+      message: message,
+      duration: duration,
+      position: 'bottom'
+    });
+    await toast.present();
+  }
+
+  async logout() {
+    try {
+      await this.auth.signOut();
+      this.router.navigate(['/']);
+    } catch (error) {
+      this.presentToast('Error logging out');
+    }
+  }
 }

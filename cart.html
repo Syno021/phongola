@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pongola Detergents POS</title>
+  <style>
+    :root {
+      --primary-color: #3880ff;
+      --secondary-color: #5260ff;
+      --success-color: #2dd36f;
+      --text-color: #333;
+      --light-gray: #f4f5f8;
+      --medium-gray: #d7d8da;
+      --dark-gray: #92949c;
+      --highlight: #f1f8ff;
+      --danger: #eb445a;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    body {
+      background-color: #f8f9fa;
+      color: var(--text-color);
+    }
+    
+    ion-header {
+      background-color: white;
+      border-bottom: 1px solid var(--medium-gray);
+      position: fixed;
+      width: 100%;
+      z-index: 100;
+    }
+    
+    ion-content {
+      height: 100vh;
+      padding-top: 110px;
+      display: flex;
+    }
+    
+    .pos-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Left side - Products catalog */
+    .products-panel {
+      flex: 7;
+      background-color: white;
+      border-right: 1px solid var(--medium-gray);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .filters-bar {
+      padding: 10px;
+      background-color: var(--light-gray);
+      border-bottom: 1px solid var(--medium-gray);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    ion-searchbar {
+      --border-radius: 4px;
+      --background: white;
+      flex: 1;
+      max-width: 300px;
+    }
+    
+    ion-select {
+      background-color: white;
+      border-radius: 4px;
+      padding: 5px;
+      border: 1px solid var(--medium-gray);
+    }
+    
+    .categories-container {
+      display: flex;
+      overflow-x: auto;
+      padding: 10px;
+      background-color: var(--light-gray);
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .category-button {
+      background-color: white;
+      border: 1px solid var(--medium-gray);
+      border-radius: 4px;
+      padding: 8px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    
+    .category-button.active {
+      background-color: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+    
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    .product-card {
+      border: 1px solid var(--medium-gray);
+      border-radius: 6px;
+      overflow: hidden;
+      background-color: white;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .product-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .product-image {
+      height: 120px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--light-gray);
+    }
+    
+    .product-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .product-info {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    
+    .product-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    
+    .product-category {
+      color: var(--dark-gray);
+      font-size: 11px;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+    
+    .product-price {
+      display: flex;
+      align-items: baseline;
+      margin-top: auto;
+    }
+    
+    .current-price {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 16px;
+    }
+    
+    .original-price {
+      text-decoration: line-through;
+      color: var(--dark-gray);
+      font-size: 12px;
+      margin-right: 5px;
+    }
+    
+    .discount-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: var(--danger);
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 6px;
+      border-radius: 3px;
+    }
+    
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      border-top: 1px solid var(--light-gray);
+      padding-top: 8px;
+    }
+    
+    .qty-btn {
+      background-color: var(--light-gray);
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    
+    .qty-value {
+      font-weight: bold;
+      width: 30px;
+      text-align: center;
+    }
+    
+    /* Right side - Cart */
+    .cart-panel {
+      flex: 3;
+      background-color: white;
+      border-left: 1px solid var(--medium-gray);
+      display: flex;
+      flex-direction: column;
+      min-width: 300px;
+    }
+    
+    .cart-header {
+      padding: 15px;
+      background-color: var(--primary-color);
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .cart-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    
+    .cart-item {
+      display: flex;
+      padding: 10px;
+      border-bottom: 1px solid var(--light-gray);
+      align-items: center;
+    }
+    
+    .cart-item-info {
+      flex: 1;
+    }
+    
+    .cart-item-name {
+      font-weight: bold;
+    }
+    
+    .cart-item-price {
+      color: var(--dark-gray);
+      font-size: 14px;
+    }
+    
+    .cart-qty {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .cart-total {
+      padding: 15px;
+      border-top: 1px solid var(--medium-gray);
+      background-color: var(--light-gray);
+    }
+    
+    .subtotal-row, .tax-row, .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .total-row {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+      border-top: 1px solid var(--medium-gray);
+      padding-top: 10px;
+    }
+    
+    .checkout-controls {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .checkout-btn {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .clear-btn {
+      background-color: var(--light-gray);
+      color: var(--text-color);
+      border: none;
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+    
+    .empty-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--dark-gray);
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .empty-message ion-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    
+    @media (max-width: 768px) {
+      .pos-container {
+        flex-direction: column;
+      }
+      
+      .cart-panel {
+        height: 40vh;
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <ion-header [translucent]="true">
+    <div class="filters-bar">
+      <ion-searchbar class="search-bar" placeholder="Search products..." (ionChange)="searchProducts($event)" [debounce]="300"></ion-searchbar>
+      <ion-select [(ngModel)]="selectedPriceRange" (ionChange)="applyFilters()">
+        <ion-select-option value="all">All Prices</ion-select-option>
+        <ion-select-option value="0-50">R0 - R50</ion-select-option>
+        <ion-select-option value="51-100">R51 - R100</ion-select-option>
+        <ion-select-option value="101-200">R101 - R200</ion-select-option>
+        <ion-select-option value="201+">R201+</ion-select-option>
+      </ion-select>
+      <ion-select [(ngModel)]="selectedSize" (ionChange)="applyFilters()" multiple="true">
+        <ion-select-option value="1L">1L</ion-select-option>
+        <ion-select-option value="2L">2L</ion-select-option>
+        <ion-select-option value="5L">5L</ion-select-option>
+        <ion-select-option value="25L">25L</ion-select-option>
+      </ion-select>
+    </div>
+  </ion-header>
+  
+  <ion-content [fullscreen]="true">
+    <div class="pos-container">
+      <!-- Left Panel - Products -->
+      <div class="products-panel">
+        <!-- Categories -->
+        <div class="categories-container">
+          <div *ngFor="let category of categories" 
+               class="category-button" 
+               [class.active]="selectedCategory === category"
+               (click)="selectCategory(category)">
+            {{category | titlecase}}
+          </div>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div *ngIf="loading" class="loading-spinner">
+          <ion-spinner></ion-spinner>
+        </div>
+        
+        <!-- Select category message -->
+        <div *ngIf="!loading && !selectedCategory" class="empty-message">
+          <ion-icon name="grid-outline"></ion-icon>
+          <h3>Please select a category to view products</h3>
+        </div>
+        
+        <!-- Products Grid -->
+        <div *ngIf="!loading && selectedCategory" class="products-grid">
+          <div *ngFor="let product of products" class="product-card" (click)="increaseQuantity(product)">
+            <!-- Discount Badge -->
+            <div *ngIf="getPromotion(product.promotion_id)" class="discount-badge">
+              {{getPromotion(product.promotion_id)?.discount_percentage}}% OFF
+            </div>
+            
+            <!-- Product Image -->
+            <div class="product-image">
+              <img [src]="product.image_url" [alt]="product.name"/>
+            </div>
+            
+            <!-- Product Info -->
+            <div class="product-info">
+              <span class="product-category">{{product.category}}</span>
+              <div class="product-name">{{product.name}}</div>
+              
+              <!-- Price Display -->
+              <div class="product-price">
+                <span *ngIf="getPromotion(product.promotion_id)" class="original-price">R{{product.price.toFixed(2)}}</span>
+                <span class="current-price">
+                  R{{getPromotion(product.promotion_id) ? calculateDiscountedPrice(product).toFixed(2) : product.price.toFixed(2)}}
+                </span>
+              </div>
+              
+              <!-- Quantity Controls -->
+              <div class="quantity-controls">
+                <button class="qty-btn" (click)="decreaseQuantity(product); $event.stopPropagation();">-</button>
+                <span class="qty-value">{{getQuantity(product)}}</span>
+                <button class="qty-btn" (click)="increaseQuantity(product); $event.stopPropagation();">+</button>
+                <button *ngIf="getQuantity(product) > 0" 
+                        (click)="addToCart(product); $event.stopPropagation();"
+                        style="background-color: var(--primary-color); color: white; border-radius: 4px; border: none; padding: 5px 10px; cursor: pointer;">
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Panel - Cart -->
+      <div class="cart-panel">
+        <div class="cart-header">
+          <span>Current Order</span>
+          <span>Items: {{cartItemCount}}</span>
+        </div>
+        
+        <!-- Cart Items -->
+        <div class="cart-items">
+          <div *ngIf="cartItemCount === 0" class="empty-message">
+            <ion-icon name="cart-outline"></ion-icon>
+            <h3>Your cart is empty</h3>
+            <p>Add products to create an order</p>
+          </div>
+          
+          <!-- This section would be populated by cart items -->
+          <!-- It would typically show item name, price, quantity with controls and subtotal -->
+        </div>
+        
+        <!-- Cart Totals -->
+        <div class="cart-total">
+          <div class="subtotal-row">
+            <span>Subtotal</span>
+            <span>R0.00</span> <!-- This would be dynamically calculated -->
+          </div>
+          <div class="tax-row">
+            <span>VAT (15%)</span>
+            <span>R0.00</span> <!-- This would be dynamically calculated -->
+          </div>
+          <div class="total-row">
+            <span>TOTAL</span>
+            <span>R0.00</span> <!-- This would be dynamically calculated -->
+          </div>
+        </div>
+        
+        <!-- Checkout Controls -->
+        <div class="checkout-controls">
+          <button class="checkout-btn" [disabled]="cartItemCount === 0">
+            Process Payment
+          </button>
+          <button class="clear-btn" [disabled]="cartItemCount === 0">
+            Cancel Order
+          </button>
+        </div>
+      </div>
+    </div>
+  </ion-content>
+</body>
+</html>

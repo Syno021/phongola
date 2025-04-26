@@ -4,6 +4,17 @@
       <ion-back-button defaultHref="/"></ion-back-button>
     </ion-buttons>
     <ion-title>Inventory Management</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/pos">
+        <ion-icon name="cart-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/admin-promotions">
+        <ion-icon name="pricetags-outline"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

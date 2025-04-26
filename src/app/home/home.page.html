@@ -11,6 +11,9 @@
         <ion-icon name="cart-outline"></ion-icon>
         <ion-badge *ngIf="cartItemCount > 0" color="danger" class="animate-fade-in">{{cartItemCount}}</ion-badge>
       </ion-button>
+      <ion-button (click)="logout()" class="cart-button">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -97,21 +100,3 @@
     </div>
   </div>
 </ion-content>
-
-<ion-menu side="start" menuId="adminMenu" contentId="mainContent">
-  <ion-header>
-    <ion-toolbar>
-      <ion-title>Admin Menu</ion-title>
-    </ion-toolbar>
-  </ion-header>
-  <ion-content>
-    <ion-list>
-      <ion-item routerLink="/admin-inventory">
-        <ion-label>Inventory Management</ion-label>
-      </ion-item>
-      <ion-item routerLink="/admin-promotions">
-        <ion-label>Promotions Management</ion-label>
-      </ion-item>
-    </ion-list>
-  </ion-content>
-</ion-menu>

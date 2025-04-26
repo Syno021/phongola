@@ -299,4 +299,13 @@ export class AdminInventoryPage implements OnInit {
     });
     toast.present();
   }
+
+  async logout() {
+    try {
+      await this.auth.signOut();
+      this.router.navigate(['/']);
+    } catch (error) {
+      this.showToast('Error logging out');
+    }
+  }
 }

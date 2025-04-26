@@ -34,6 +34,13 @@ export class LoginComponent implements OnInit {
         return runInInjectionContext(this.injector, async () => {
           const result = await this.auth.signInWithEmailAndPassword(this.email, this.password);
           if (result.user) {
+            // First dismiss the modal
+            await this.modalCtrl.dismiss(true, 'login-success');
+            
+            // Small delay to ensure modal dismissal completes
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Then check role and navigate
             await this.checkUserRoleAndNavigate(result.user.uid);
           }
         });

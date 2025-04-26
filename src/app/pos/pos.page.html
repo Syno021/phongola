@@ -1,0 +1,181 @@
+<ion-content [fullscreen]="true">
+    <div class="pos-container">
+      <!-- Left Panel - Products -->
+      <div class="products-panel">
+        <!-- Categories and Buttons Container -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <!-- Categories -->
+          <div class="categories-container">
+            <div *ngFor="let category of categories" 
+                 class="category-button" 
+                 [class.active]="selectedCategory === category"
+                 (click)="selectCategory(category)">
+              {{category | titlecase}}
+            </div>
+          </div>
+          
+          <!-- Navigation Buttons -->
+          <ion-buttons class="nav-buttons">
+            <ion-button routerLink="/admin-inventory">
+              <ion-icon name="bag-outline"></ion-icon>
+            </ion-button>
+            <ion-button routerLink="/admin-promotions">
+              <ion-icon name="pricetags-outline"></ion-icon>
+            </ion-button>
+            <ion-button>
+              <ion-icon name="log-out-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div *ngIf="loading" class="loading-spinner">
+          <ion-spinner></ion-spinner>
+        </div>
+        
+        <!-- Select category message -->
+        <div *ngIf="!loading && !selectedCategory" class="empty-message">
+          <ion-icon name="grid-outline"></ion-icon>
+          <h3>Please select a category to view products</h3>
+        </div>
+        
+        <!-- Products Grid -->
+        <div *ngIf="!loading && selectedCategory" class="products-grid">
+          <div *ngFor="let product of products" class="product-card" (click)="increaseQuantity(product)">
+            <!-- Discount Badge -->
+            <div *ngIf="getPromotion(product.promotion_id)" class="discount-badge">
+              {{getPromotion(product.promotion_id)?.discount_percentage}}% OFF
+            </div>
+            
+            <!-- Product Image -->
+            <div class="product-image">
+              <img [src]="product.image_url" [alt]="product.name"/>
+            </div>
+            
+            <!-- Product Info -->
+            <div class="product-info">
+              <span class="product-category">{{product.category}}</span>
+              <div class="product-name">{{product.name}}</div>
+              
+              <!-- Price Display -->
+              <div class="product-price">
+                <span *ngIf="getPromotion(product.promotion_id)" class="original-price">R{{product.price.toFixed(2)}}</span>
+                <span class="current-price">
+                  R{{getPromotion(product.promotion_id) ? calculateDiscountedPrice(product).toFixed(2) : product.price.toFixed(2)}}
+                </span>
+              </div>
+              
+              <!-- Quantity Controls -->
+              <div class="quantity-controls">
+                <button class="qty-btn" (click)="decreaseQuantity(product); $event.stopPropagation();">-</button>
+                <span class="qty-value">{{getQuantity(product)}}</span>
+                <button class="qty-btn" (click)="increaseQuantity(product); $event.stopPropagation();">+</button>
+                <button *ngIf="getQuantity(product) > 0" 
+                        (click)="addToCart(product); $event.stopPropagation();"
+                        style="background-color: var(--primary-color); color: #2d4d46; border-radius: 4px; border: none; padding: 5px 10px; cursor: pointer;">
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Panel - Cart -->
+      <div class="cart-panel">
+        <div class="cart-header">
+          <span>Current Order</span>
+          <span>Items: {{cartItemCount}}</span>
+        </div>
+        
+        <!-- Cart Items -->
+        <div class="cart-items">
+          <div *ngIf="isLoading" class="loading-spinner">
+            <ion-spinner></ion-spinner>
+          </div>
+          
+          <div *ngIf="!isLoading && cartItems.length === 0" class="empty-message">
+            <ion-icon name="cart-outline"></ion-icon>
+            <h3>Your cart is empty</h3>
+            <p>Add products to create an order</p>
+          </div>
+          
+          <!-- Cart items display -->
+          <div *ngIf="!isLoading && cartItems.length > 0" class="cart-item-list">
+            <div *ngFor="let item of cartItems" class="cart-item">
+              <div class="item-image">
+                <img [src]="item.image_url" [alt]="item.name">
+              </div>
+              <div class="item-details">
+                <div class="item-name">{{item.name}}</div>
+                <div class="item-price">R{{item.price.toFixed(2)}}</div>
+                <div class="item-quantity">
+                  <button class="qty-btn" (click)="decreaseCartQuantity(item.product_id)">-</button>
+                  <span class="qty-value">{{item.quantity}}</span>
+                  <button class="qty-btn" (click)="increaseCartQuantity(item)">+</button>
+                </div>
+              </div>
+              <div class="item-subtotal">
+                R{{(item.price * item.quantity).toFixed(2)}}
+              </div>
+              <button class="remove-btn" (click)="confirmRemoveItem(item)">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Cart Totals -->
+        <div class="cart-total" *ngIf="cartItems.length > 0">
+          <div class="subtotal-row">
+            <span>Subtotal</span>
+            <span>R{{getSubtotal().toFixed(2)}}</span>
+          </div>
+          <div class="tax-row">
+            <span>VAT (15%)</span>
+            <span>R{{(getSubtotal() * 0.15).toFixed(2)}}</span>
+          </div>
+          <div class="total-row">
+            <span>TOTAL</span>
+            <span>R{{(getSubtotal() * 1.15).toFixed(2)}}</span>
+          </div>
+        </div>
+        
+        <!-- Payment Method Selection -->
+        <div class="payment-method" *ngIf="cartItems.length > 0">
+          <div class="payment-options">
+            <button [class.active]="paymentMethod === 'cash'" (click)="selectPayment('cash')">Cash</button>
+            <button [class.active]="paymentMethod === 'card'" (click)="selectPayment('card')">Card</button>
+          </div>
+          
+          <!-- Cash Payment Numpad -->
+          <div class="cash-payment" *ngIf="paymentMethod === 'cash'">
+            <div class="amount-display">
+              <div class="amount-label">Amount Tendered:</div>
+              <div class="amount-value">R{{cashAmount || '0.00'}}</div>
+              <div class="change" *ngIf="getChange() > 0">
+                Change Due: R{{getChange().toFixed(2)}}
+              </div>
+            </div>
+            <div class="numpad">
+              <button *ngFor="let num of [7,8,9,4,5,6,1,2,3,'C',0,'.']" 
+                      (click)="onNumpadPress(num)" 
+                      [class.clear]="num === 'C'">
+                {{num}}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Checkout Controls -->
+        <div class="checkout-controls">
+          <button class="checkout-btn" [disabled]="cartItems.length === 0" (click)="processCheckout('PAYMENT-' + Date.now())">
+            Process Payment
+          </button>
+          <button class="clear-btn" [disabled]="cartItems.length === 0" (click)="clearCart()">
+            Cancel Order
+          </button>
+        </div>
+      </div>
+    </div>
+  </ion-content>
