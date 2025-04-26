@@ -1,0 +1,1 @@
+npm install d3 @types/d3 chart.js

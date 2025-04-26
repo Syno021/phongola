@@ -1,0 +1,215 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Analytics Dashboard</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Date Filter -->
+  <ion-segment [(ngModel)]="dateFilter" (ionChange)="updateDateFilter($event)">
+    <ion-segment-button value="week">
+      <ion-label>Week</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="month">
+      <ion-label>Month</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="year">
+      <ion-label>Year</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Key Metrics -->
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12" size-md="3">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Total Revenue</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>R{{ totalRevenue | number:'1.2-2' }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="3">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Total Orders</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>{{ totalOrders }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="3">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Average Order Value</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>R{{ averageOrderValue | number:'1.2-2' }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="3">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Sales Growth</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>{{ salesGrowthRate | number:'1.1-1' }}%</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <!-- Promotional Metrics -->
+    <ion-row>
+      <ion-col size="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Active Promotions</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>{{ activePromotions }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Promotional Sales</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>R{{ promotionalSalesTotal | number:'1.2-2' }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Regular Sales</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <h2>R{{ regularSalesTotal | number:'1.2-2' }}</h2>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Charts -->
+  <ion-grid>
+    <ion-row>
+      <!-- Sales Trend Chart -->
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Sales Trend</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <canvas #salesChart></canvas>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <!-- Daily Products Chart -->
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Regular vs Promotional Sales</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <canvas #dailyProductsChart></canvas>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <!-- Product Trends Chart -->
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>New Products Added</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <canvas #productTrendsChart></canvas>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <!-- Promotion Performance Chart -->
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Promotion Performance</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <canvas #promotionPerformanceChart></canvas>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <!-- Category Distribution -->
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Product Categories</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div #categoryPieChart></div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <!-- Payment Methods -->
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Payment Methods</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <canvas #paymentMethodsChart></canvas>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <!-- Top Growing Categories -->
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Top Growing Categories</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list>
+              <ion-item *ngFor="let category of topGrowingCategories">
+                <ion-label>{{ category.category }}</ion-label>
+                <ion-note slot="end">{{ category.growth | number:'1.1-1' }}%</ion-note>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <!-- Top Products -->
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Top 5 Products</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list>
+              <ion-item *ngFor="let product of topProducts">
+                <ion-label>{{ product.name }}</ion-label>
+                <ion-note slot="end">R{{ product.total | number:'1.2-2' }}</ion-note>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>
