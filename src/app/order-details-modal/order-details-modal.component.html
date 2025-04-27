@@ -1,0 +1,172 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Order Details: {{ order.order_reference }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismissModal()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Order Information</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list lines="full">
+              <ion-item>
+                <ion-label>
+                  <strong>Order Reference</strong>
+                  <p>{{ order.order_reference }}</p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-label>
+                  <strong>Date</strong>
+                  <p>{{ formatDate(order.created_at) }}</p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-label>
+                  <strong>Status</strong>
+                  <p>
+                    <ion-badge [color]="
+                      order.status === 'delivered' ? 'success' : 
+                      order.status === 'pending' ? 'warning' : 
+                      order.status === 'canceled' ? 'danger' : 'medium'
+                    ">
+                      {{ order.status | titlecase }}
+                    </ion-badge>
+                  </p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-label>
+                  <strong>Payment Status</strong>
+                  <p>
+                    <ion-badge [color]="
+                      order.payment_status === 'paid' ? 'success' : 
+                      order.payment_status === 'cash_on_delivery' ? 'warning' : 'medium'
+                    ">
+                      {{ order.payment_status === 'cash_on_delivery' ? 'Cash on Delivery' : order.payment_status | titlecase }}
+                    </ion-badge>
+                  </p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Customer Information</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list lines="full">
+              <ion-item>
+                <ion-label>
+                  <strong>Email</strong>
+                  <p>{{ order.user_email }}</p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-label>
+                  <strong>User ID</strong>
+                  <p>{{ order.user_id }}</p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+    
+    <ion-row>
+      <ion-col size="12" size-md="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Delivery Information</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list lines="full">
+              <ion-item>
+                <ion-label>
+                  <strong>Delivery Method</strong>
+                  <p>{{ order.delivery_method | titlecase }}</p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-label>
+                  <strong>Delivery Fee</strong>
+                  <p>{{ order.delivery_fee | currency:'ZAR':'symbol':'1.2-2' }}</p>
+                </ion-label>
+              </ion-item>
+              <ion-item *ngIf="order.delivery_address">
+                <ion-label>
+                  <strong>Address</strong>
+                  <p>{{ order.delivery_address.address_line1 }}</p>
+                  <p *ngIf="order.delivery_address.address_line2">{{ order.delivery_address.address_line2 }}</p>
+                  <p>{{ order.delivery_address.city }}, {{ order.delivery_address.state }} {{ order.delivery_address.postal_code }}</p>
+                  <p>{{ order.delivery_address.country }}</p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+    
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Order Items</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="table-container">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of order.items">
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.price | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.price * item.quantity | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3" class="text-right"><strong>Subtotal</strong></td>
+                    <td>{{ calculateSubtotal() | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="3" class="text-right"><strong>Delivery Fee</strong></td>
+                    <td>{{ order.delivery_fee | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="3" class="text-right"><strong>Total</strong></td>
+                    <td>{{ order.amount | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>

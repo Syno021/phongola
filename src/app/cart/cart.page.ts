@@ -223,7 +223,7 @@ export class CartPage implements OnInit, OnDestroy {
       spinner: 'circles'
     });
     await loading.present();
-
+  
     try {
       // Get the delivery address if delivery method is selected
       let deliveryAddress = null;
@@ -242,13 +242,18 @@ export class CartPage implements OnInit, OnDestroy {
         }
       }
       
-      // Save payment details to Firestore
-      const paymentData = {
-        reference: reference,
+      // Generate a unique order ID
+      const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
+      
+      // Create the main order record with all details
+      const orderData = {
+        order_id: orderId,
         amount: this.total,
         user_email: this.userEmail,
         user_id: this.userId,
-        status: 'successful',
+        status: 'processing',
+        payment_status: 'paid',
+        payment_reference: reference,
         created_at: new Date(),
         delivery_method: this.deliveryMethod,
         delivery_address: deliveryAddress,
@@ -260,18 +265,52 @@ export class CartPage implements OnInit, OnDestroy {
           quantity: item.quantity
         }))
       };
-
-      // Save payment data to Firestore
+  
+      // Save the order to Firestore
       await this.ngZone.run(() => {
         return runInInjectionContext(this.injector, async () => {
-            return this.firestore.collection('payments').doc(reference).set(paymentData);
+          return this.firestore.collection('orders').doc(orderId).set(orderData);
         });
       });
       
-      // Now process the checkout with CartService
-      await this.processCheckout(reference);
+      // Also save minimal payment record with reference to the order
+      await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore.collection('payments').doc(reference).set({
+            order_id: orderId,
+            amount: this.total,
+            status: 'successful',
+            created_at: new Date(),
+            payment_method: 'paystack',
+            user_id: this.userId
+          });
+        });
+      });
+      
+      // Clear the cart
+      this.cartService.clearCart();
       
       loading.dismiss();
+      
+      // Show success message and navigate to confirmation page
+      const alert = await this.alertController.create({
+        header: 'Order Placed!',
+        message: 'Your payment was successful and your order has been placed.',
+        buttons: [{
+          text: 'OK',
+          handler: () => {
+            this.router.navigate(['/order-confirmation'], {
+              queryParams: {
+                orderId: orderId,
+                paymentRef: reference,
+                deliveryMethod: this.deliveryMethod
+              }
+            });
+          }
+        }]
+      });
+      await alert.present();
+      
     } catch (error) {
       loading.dismiss();
       console.error('Error saving payment:', error);
@@ -426,8 +465,8 @@ export class CartPage implements OnInit, OnDestroy {
     await loading.present();
     
     try {
-      // Generate a unique reference for the order
-      const orderReference = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
+      // Generate a unique order ID
+      const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
       
       // Get the delivery address
       let deliveryAddress = null;
@@ -437,7 +476,7 @@ export class CartPage implements OnInit, OnDestroy {
         deliveryAddress = this.addressForm.value;
         await this.saveNewAddress();
       }
-
+  
       // Initialize Paystack payment
       const amountInCents = Math.round(this.total * 100);
       const handler = window.PaystackPop.setup({
@@ -445,16 +484,16 @@ export class CartPage implements OnInit, OnDestroy {
         email: this.userEmail,
         amount: amountInCents,
         currency: 'ZAR',
-        ref: orderReference,
+        ref: orderId, // Use orderId as payment reference for consistency
         onClose: () => {
           console.log('Payment window closed');
           loading.dismiss();
         },
         callback: async (response: any) => {
           try {
-            // Save order details to Firestore
+            // Save comprehensive order details to Firestore
             const orderData = {
-              order_reference: orderReference,
+              order_id: orderId,
               amount: this.total,
               user_email: this.userEmail,
               user_id: this.userId,
@@ -473,11 +512,18 @@ export class CartPage implements OnInit, OnDestroy {
               }))
             };
             
+            // Save the order to Firestore
             await this.ngZone.run(() => {
               return runInInjectionContext(this.injector, async () => {
-                await this.firestore.collection('orders').doc(orderReference).set(orderData);
+                await this.firestore.collection('orders').doc(orderId).set(orderData);
+              });
+            });
+  
+            // Also save minimal payment record with reference to the order
+            await this.ngZone.run(() => {
+              return runInInjectionContext(this.injector, async () => {
                 await this.firestore.collection('payments').doc(response.reference).set({
-                  order_reference: orderReference,
+                  order_id: orderId,
                   amount: this.total,
                   status: 'successful',
                   created_at: new Date(),
@@ -487,7 +533,9 @@ export class CartPage implements OnInit, OnDestroy {
               });
             });
             
-            await this.processCheckout(orderReference);
+            // Clear the cart
+            this.cartService.clearCart();
+            
             loading.dismiss();
             
             // Show success message
@@ -499,7 +547,7 @@ export class CartPage implements OnInit, OnDestroy {
                 handler: () => {
                   this.router.navigate(['/order-confirmation'], {
                     queryParams: {
-                      orderId: orderReference,
+                      orderId: orderId,
                       paymentRef: response.reference,
                       deliveryMethod: this.deliveryMethod
                     }
@@ -520,7 +568,7 @@ export class CartPage implements OnInit, OnDestroy {
           await this.presentToast(`Payment error: ${error.message || 'Unknown error occurred'}`);
         }
       });
-
+  
       handler.openIframe();
     } catch (error) {
       loading.dismiss();

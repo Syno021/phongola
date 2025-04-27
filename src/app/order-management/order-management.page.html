@@ -1,0 +1,118 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>Order Management</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/admin-inventory">
+        <ion-icon name="bag-outline"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Order Management</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <div class="ion-padding">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>All Orders</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div *ngIf="loading" class="ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Loading orders...</p>
+        </div>
+        
+        <div *ngIf="!loading && orders.length === 0" class="ion-text-center ion-padding">
+          <p>No orders found.</p>
+        </div>
+        
+        <div class="table-container" *ngIf="!loading && orders.length > 0">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Order Reference</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Payment Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let order of displayedOrders" (click)="viewOrderDetails(order)" class="order-row">
+                <td>{{ order.order_reference }}</td>
+                <td>{{ formatDate(order.created_at) }}</td>
+                <td>{{ order.user_email }}</td>
+                <td>{{ order.amount | currency:'ZAR':'symbol':'1.2-2' }}</td>
+                <td>
+                  <ion-badge [color]="
+                    order.status === 'delivered' ? 'success' : 
+                    order.status === 'pending' ? 'warning' : 
+                    order.status === 'canceled' ? 'danger' : 'medium'
+                  ">
+                    {{ order.status | titlecase }}
+                  </ion-badge>
+                </td>
+                <td>
+                  <ion-badge [color]="
+                    order.payment_status === 'paid' ? 'success' : 
+                    order.payment_status === 'cash_on_delivery' ? 'warning' : 'medium'
+                  ">
+                    {{ order.payment_status === 'cash_on_delivery' ? 'COD' : order.payment_status | titlecase }}
+                  </ion-badge>
+                </td>
+                <td>
+                  <ion-button fill="clear" size="small" (click)="viewOrderDetails(order); $event.stopPropagation()">
+                    <ion-icon name="eye-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" (click)="openStatusUpdate(order); $event.stopPropagation()">
+                    <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="pagination-controls ion-padding-top ion-text-center">
+            <ion-button *ngIf="pageSize === 10 && totalOrders > 10" 
+                        fill="clear" 
+                        (click)="showMore()">
+              Show More (25)
+            </ion-button>
+            
+            <div *ngIf="totalOrders > pageSize" class="ion-padding-top">
+              <ion-button fill="clear" 
+                          [disabled]="currentPage === 1" 
+                          (click)="previousPage()">
+                <ion-icon name="chevron-back-outline"></ion-icon>
+                Previous
+              </ion-button>
+              <ion-text class="ion-padding-horizontal">
+                Page {{currentPage}}
+              </ion-text>
+              <ion-button fill="clear" 
+                          [disabled]="currentPage * pageSize >= totalOrders" 
+                          (click)="nextPage()">
+                Next
+                <ion-icon name="chevron-forward-outline"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

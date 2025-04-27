@@ -7,6 +7,9 @@ import { Order } from '../shared/models/order';
 import { Promotion } from '../shared/models/promotion';
 import * as d3 from 'd3';
 import { Chart, registerables } from 'chart.js';
+import { ToastController } from '@ionic/angular';
+import { Router } from '@angular/router';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
 
 Chart.register(...registerables);
 
@@ -48,7 +51,10 @@ export class StatsPage implements OnInit {
   topGrowingCategories: Array<{ category: string; growth: number }> = [];
   
   constructor(
+    private auth: AngularFireAuth,
     private firestore: AngularFirestore,
+    private router: Router,
+    private toastController: ToastController,
     private ngZone: NgZone,
     private injector: Injector
   ) {}
@@ -556,6 +562,25 @@ export class StatsPage implements OnInit {
       this.calculateMetrics();
       this.calculateAdvancedMetrics();
       this.renderCharts();
+    }
+  }
+
+  private async showToast(message: string) {
+    const toast = await this.toastController.create({
+      message: message,
+      duration: 3000,
+      position: 'bottom',
+      color: message.includes('Error') ? 'danger' : 'success'
+    });
+    toast.present();
+  }
+
+  async logout() {
+    try {
+      await this.auth.signOut();
+      this.router.navigate(['/']);
+    } catch (error) {
+      this.showToast('Error logging out');
     }
   }
 }
