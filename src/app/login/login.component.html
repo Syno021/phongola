@@ -8,21 +8,17 @@
       <ion-label position="floating">Email</ion-label>
       <ion-input type="email" [(ngModel)]="email"></ion-input>
     </ion-item>
-
     <ion-item>
       <ion-label position="floating">Password</ion-label>
       <ion-input type="password" [(ngModel)]="password"></ion-input>
     </ion-item>
-
     <ion-button expand="block" (click)="login()">
       Login
     </ion-button>
-
     <ion-button expand="block" (click)="loginWithGoogle()" color="danger">
       <ion-icon name="logo-google" slot="start"></ion-icon>
       Login with Google
     </ion-button>
-
     <ion-button fill="clear" expand="block" (click)="goToRegister()">
       Don't have an account? Register here
     </ion-button>

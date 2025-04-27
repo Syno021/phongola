@@ -56,6 +56,138 @@
       </ion-item>
     </ion-list>
 
+    <!-- Delivery Method Selection -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Delivery Options</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-segment [(ngModel)]="deliveryMethod" (ionChange)="deliveryMethodChanged()">
+          <ion-segment-button value="online">
+            <ion-label>Online Payment</ion-label>
+            <ion-icon name="card-outline"></ion-icon>
+          </ion-segment-button>
+          <ion-segment-button value="delivery">
+            <ion-label>Delivery</ion-label>
+            <ion-icon name="home-outline"></ion-icon>
+          </ion-segment-button>
+        </ion-segment>
+
+        <!-- Address Form (shown only when delivery is selected) -->
+        <div *ngIf="deliveryMethod === 'delivery'" class="address-form ion-margin-top">
+          <h4>Delivery Address</h4>
+          
+          <!-- Saved Addresses (if any) -->
+          <ion-list *ngIf="savedAddresses.length > 0 && !showNewAddressForm">
+            <ion-radio-group [(ngModel)]="selectedAddressId">
+              <ion-list-header>
+                <ion-label>Select a saved address</ion-label>
+              </ion-list-header>
+              
+              <ion-item *ngFor="let address of savedAddresses">
+                <ion-label>
+                  <h3>{{address.address_line1}}</h3>
+                  <p *ngIf="address.address_line2">{{address.address_line2}}</p>
+                  <p>{{address.city}}, {{address.state}} {{address.postal_code}}</p>
+                  <p>{{address.country}}</p>
+                  <ion-badge *ngIf="address.is_default" color="success">Default</ion-badge>
+                </ion-label>
+                <ion-radio slot="start" [value]="address.address_id"></ion-radio>
+                <ion-buttons slot="end">
+                  <ion-button (click)="editAddress(address)">
+                    <ion-icon name="create-outline" color="primary"></ion-icon>
+                  </ion-button>
+                  <ion-button (click)="deleteAddress(address.address_id)">
+                    <ion-icon name="trash-outline" color="danger"></ion-icon>
+                  </ion-button>
+                </ion-buttons>
+              </ion-item>
+            </ion-radio-group>
+          </ion-list>
+
+          <ion-button *ngIf="!showNewAddressForm && savedAddresses.length > 0" 
+                      expand="block" 
+                      fill="outline" 
+                      (click)="toggleNewAddressForm()">
+            <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+            Add New Address
+          </ion-button>
+          
+          <!-- New Address Form -->
+          <div *ngIf="showNewAddressForm || savedAddresses.length === 0">
+            <form [formGroup]="addressForm">
+              <ion-item>
+                <ion-label position="floating">Address Line 1 *</ion-label>
+                <ion-input formControlName="address_line1" type="text" required></ion-input>
+                <ion-note slot="error" *ngIf="addressForm.get('address_line1')?.touched && addressForm.get('address_line1')?.errors?.['required']">
+                  Address is required
+                </ion-note>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="floating">Address Line 2</ion-label>
+                <ion-input formControlName="address_line2" type="text"></ion-input>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="floating">City *</ion-label>
+                <ion-input formControlName="city" type="text" required></ion-input>
+                <ion-note slot="error" *ngIf="addressForm.get('city')?.touched && addressForm.get('city')?.errors?.['required']">
+                  City is required
+                </ion-note>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="floating">State/Province *</ion-label>
+                <ion-input formControlName="state" type="text" required></ion-input>
+                <ion-note slot="error" *ngIf="addressForm.get('state')?.touched && addressForm.get('state')?.errors?.['required']">
+                  State is required
+                </ion-note>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="floating">Postal Code *</ion-label>
+                <ion-input formControlName="postal_code" type="text" required></ion-input>
+                <ion-note slot="error" *ngIf="addressForm.get('postal_code')?.touched && addressForm.get('postal_code')?.errors?.['required']">
+                  Postal code is required
+                </ion-note>
+              </ion-item>
+
+              <ion-item>
+                <ion-label position="floating">Country *</ion-label>
+                <ion-input formControlName="country" type="text" required></ion-input>
+                <ion-note slot="error" *ngIf="addressForm.get('country')?.touched && addressForm.get('country')?.errors?.['required']">
+                  Country is required
+                </ion-note>
+              </ion-item>
+
+              <ion-item>
+                <ion-label>Set as default address</ion-label>
+                <ion-checkbox formControlName="is_default" slot="start"></ion-checkbox>
+              </ion-item>
+              
+              <div class="ion-padding">
+                <ion-button expand="block" 
+                            color="primary"
+                            (click)="submitAddressForm()"
+                            [disabled]="!addressForm.valid">
+                  {{ isEditingAddress() ? 'Update Address' : 'Save Address' }}
+                </ion-button>
+                
+                <ion-button *ngIf="savedAddresses.length > 0" 
+                          expand="block" 
+                          fill="outline" 
+                          (click)="toggleNewAddressForm()"
+                          class="ion-margin-top">
+                  Cancel
+                </ion-button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
     <!-- Cart Summary -->
     <ion-card class="summary-card">
       <ion-card-header>
@@ -71,15 +203,21 @@
           <span>Tax (15%)</span>
           <span>{{formattedTax}}</span>
         </div>
+        <!-- Delivery fee (if delivery selected) -->
+        <div class="summary-item" *ngIf="deliveryMethod === 'delivery'">
+          <span>Delivery Fee</span>
+          <span>{{formattedDeliveryFee}}</span>
+        </div>
         <div class="divider"></div>
         <div class="summary-item total">
           <span>Total</span>
           <span>{{formattedTotal}}</span>
         </div>
         
-        <ion-button expand="block" class="checkout-button" (click)="proceedToCheckout()">
-          <ion-icon name="card-outline" slot="start"></ion-icon>
-          Proceed to Checkout
+        <ion-button expand="block" class="checkout-button" (click)="proceedToCheckout()" 
+                   [disabled]="(deliveryMethod === 'delivery' && !isValidDeliverySelection())">
+          <ion-icon [name]="deliveryMethod === 'online' ? 'card-outline' : 'home-outline'" slot="start"></ion-icon>
+          {{deliveryMethod === 'online' ? 'Pay Online' : 'Complete Order'}}
         </ion-button>
         
         <ion-button expand="block" fill="outline" class="continue-button" (click)="continueShopping()">

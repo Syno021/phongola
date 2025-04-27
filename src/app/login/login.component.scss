@@ -1,27 +1,55 @@
 .login-container {
   max-width: 400px;
+  width: 90%;
   margin: 2rem auto;
-  padding: 2rem;
+  padding: 1.5rem;
   position: relative;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 
-  h2 {
-    text-align: center;
-    margin-bottom: 2rem;
+@media (max-width: 480px) {
+  .login-container {
+    width: 95%;
+    padding: 1rem;
+    margin: 1rem auto;
   }
+}
 
-  .login-form {
-    ion-item {
-      margin-bottom: 1rem;
-    }
+.login-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
 
-    ion-button {
-      margin-top: 1rem;
-    }
-  }
+.login-form ion-item {
+  margin-bottom: 1rem;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+
+.login-form ion-button {
+  margin-top: 1rem;
 }
 
 .close-button {
   position: absolute;
   top: 10px;
   right: 10px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  height: 36px;
+}
+
+/* Fix input width */
+ion-input {
+  width: 100%;
+}
+
+/* Make sure buttons don't overflow */
+ion-button[expand="block"] {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }

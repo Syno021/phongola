@@ -15,9 +15,11 @@ import { runInInjectionContext } from '@angular/core';
   standalone: false,
 })
 export class AdminInventoryPage implements OnInit {
+  productCategories: string[] = [];
   selectedSegment = 'add';
   showForm = false;
   categories = ProductCategory;
+  ProductCategory = ProductCategory; // Add this line to expose enum to template
   productForm: FormGroup;
   editForm: FormGroup;
   selectedFile: File | null = null;
@@ -61,6 +63,7 @@ export class AdminInventoryPage implements OnInit {
   }
 
   ngOnInit() {
+    this.productCategories = Object.values(ProductCategory);
     this.loadProducts();
     this.loadPromotions();
   }

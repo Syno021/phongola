@@ -7,6 +7,8 @@ import { Product } from '../shared/models/product';
 import { Subscription, take } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { CustomerAddress } from '../shared/models/customerAddress';
 
 declare global {
   interface Window {
@@ -34,6 +36,15 @@ export class CartPage implements OnInit, OnDestroy {
   isLoading = true;
   private cartSubscription: Subscription | null = null;
   userEmail: string = '';
+  userId: string = '';
+  
+  // Delivery option variables
+  deliveryMethod: 'online' | 'delivery' = 'online';
+  deliveryFee: number = 50; // Default delivery fee
+  savedAddresses: CustomerAddress[] = [];
+  selectedAddressId: string | null = null;
+  showNewAddressForm: boolean = false;
+  addressForm: FormGroup;
 
   get subtotal(): number {
     return this.cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -44,7 +55,7 @@ export class CartPage implements OnInit, OnDestroy {
   }
 
   get total(): number {
-    return this.subtotal + this.tax;
+    return this.subtotal + this.tax + (this.deliveryMethod === 'delivery' ? this.deliveryFee : 0);
   }
 
   get formattedSubtotal(): string {
@@ -53,6 +64,10 @@ export class CartPage implements OnInit, OnDestroy {
 
   get formattedTax(): string {
     return this.formatCurrency(this.tax);
+  }
+  
+  get formattedDeliveryFee(): string {
+    return this.formatCurrency(this.deliveryFee);
   }
 
   get formattedTotal(): string {
@@ -67,13 +82,24 @@ export class CartPage implements OnInit, OnDestroy {
     private router: Router,
     private firestore: AngularFirestore,
     private ngZone: NgZone,
-    private injector: Injector
-  ) { }
+    private injector: Injector,
+    private formBuilder: FormBuilder
+  ) {
+    this.addressForm = this.formBuilder.group({
+      address_line1: ['', Validators.required],
+      address_line2: [''],
+      city: ['', Validators.required],
+      state: ['', Validators.required],
+      postal_code: ['', Validators.required],
+      country: ['', Validators.required],
+      is_default: [false]
+    });
+  }
 
   ngOnInit() {
     this.loadCartItems();
     this.loadPaystackScript();
-    this.getCurrentUserEmail();
+    this.getCurrentUserInfo();
   }
 
   ngOnDestroy() {
@@ -95,12 +121,53 @@ export class CartPage implements OnInit, OnDestroy {
     }
   }
 
-  getCurrentUserEmail() {
-    this.cartService.getCurrentUser().then(user => {
+  async getCurrentUserInfo() {
+    try {
+      const user = await this.cartService.getCurrentUser();
       if (user) {
         this.userEmail = user.email || 'customer@email.com';
+        this.userId = user.uid;
+        
+        // Load user's saved addresses
+        this.loadSavedAddresses();
       }
-    });
+    } catch (error) {
+      console.error('Error getting current user:', error);
+    }
+  }
+  
+  async loadSavedAddresses() {
+    if (!this.userId) return;
+    
+    try {
+      const addressesSnapshot = await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore
+            .collection<CustomerAddress>('customer_addresses', ref => 
+              ref.where('user_id', '==', this.userId))
+            .get()
+            .toPromise();
+        });
+      });
+      
+      if (addressesSnapshot) {
+        this.savedAddresses = addressesSnapshot.docs.map(doc => {
+          const data = doc.data() as CustomerAddress;
+          return { ...data, address_id: doc.id };
+        });
+        
+        // Set default address if available
+        const defaultAddress = this.savedAddresses.find(addr => addr.is_default);
+        if (defaultAddress) {
+          this.selectedAddressId = defaultAddress.address_id;
+        } else if (this.savedAddresses.length > 0) {
+          this.selectedAddressId = this.savedAddresses[0].address_id;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved addresses:', error);
+      await this.presentToast('Failed to load your saved addresses.');
+    }
   }
 
   async makePayment() {
@@ -117,7 +184,7 @@ export class CartPage implements OnInit, OnDestroy {
     // Check if user is logged in before proceeding
     this.cartService.isLoggedIn().pipe(take(1)).subscribe(async isLoggedIn => {
       if (!isLoggedIn) {
-        this.presentAuthAlert();
+        await this.openLoginComponent();
         return;
       }
 
@@ -158,13 +225,34 @@ export class CartPage implements OnInit, OnDestroy {
     await loading.present();
 
     try {
+      // Get the delivery address if delivery method is selected
+      let deliveryAddress = null;
+      if (this.deliveryMethod === 'delivery') {
+        if (this.selectedAddressId && !this.showNewAddressForm) {
+          // Use selected saved address
+          deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
+        } else {
+          // Use new address from form
+          deliveryAddress = this.addressForm.value;
+          
+          // Save the new address to Firestore if form is valid
+          if (this.addressForm.valid) {
+            await this.saveNewAddress();
+          }
+        }
+      }
+      
       // Save payment details to Firestore
       const paymentData = {
         reference: reference,
         amount: this.total,
         user_email: this.userEmail,
+        user_id: this.userId,
         status: 'successful',
         created_at: new Date(),
+        delivery_method: this.deliveryMethod,
+        delivery_address: deliveryAddress,
+        delivery_fee: this.deliveryMethod === 'delivery' ? this.deliveryFee : 0,
         items: this.cartItems.map(item => ({
           product_id: item.product_id,
           name: item.name,
@@ -287,9 +375,214 @@ export class CartPage implements OnInit, OnDestroy {
       this.presentToast('Your cart is empty');
       return;
     }
+    
+    // Check if delivery method and address are valid if delivery is selected
+    if (this.deliveryMethod === 'delivery') {
+      if (!this.isValidDeliverySelection()) {
+        this.presentToast('Please select or add a valid delivery address');
+        return;
+      }
+      
+      // If using new address form, validate it
+      if (this.showNewAddressForm && !this.addressForm.valid) {
+        this.markFormGroupTouched(this.addressForm);
+        this.presentToast('Please fill in all required address fields');
+        return;
+      }
+      
+      // Process the order with delivery
+      this.processDeliveryOrder();
+    } else {
+      // Start the online payment process
+      this.makePayment();
+    }
+  }
   
-    // Start the payment process
-    this.makePayment();
+  // Helper method to mark all form controls as touched
+  markFormGroupTouched(formGroup: FormGroup) {
+    Object.values(formGroup.controls).forEach(control => {
+      control.markAsTouched();
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+  
+  // Check if delivery selection is valid
+  isValidDeliverySelection(): boolean {
+    if (this.showNewAddressForm) {
+      return this.addressForm.valid;
+    } else {
+      return !!this.selectedAddressId;
+    }
+  }
+  
+  // Process order with delivery
+  async processDeliveryOrder() {
+    const loading = await this.loadingController.create({
+      message: 'Processing your order...',
+      spinner: 'circles'
+    });
+    await loading.present();
+    
+    try {
+      // Generate a unique reference for the order
+      const orderReference = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
+      
+      // Get the delivery address
+      let deliveryAddress = null;
+      if (this.selectedAddressId && !this.showNewAddressForm) {
+        deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
+      } else {
+        deliveryAddress = this.addressForm.value;
+        await this.saveNewAddress();
+      }
+
+      // Initialize Paystack payment
+      const amountInCents = Math.round(this.total * 100);
+      const handler = window.PaystackPop.setup({
+        key: environment.paystackTestPublicKey,
+        email: this.userEmail,
+        amount: amountInCents,
+        currency: 'ZAR',
+        ref: orderReference,
+        onClose: () => {
+          console.log('Payment window closed');
+          loading.dismiss();
+        },
+        callback: async (response: any) => {
+          try {
+            // Save order details to Firestore
+            const orderData = {
+              order_reference: orderReference,
+              amount: this.total,
+              user_email: this.userEmail,
+              user_id: this.userId,
+              status: 'processing',
+              payment_status: 'paid',
+              payment_reference: response.reference,
+              created_at: new Date(),
+              delivery_method: this.deliveryMethod,
+              delivery_address: deliveryAddress,
+              delivery_fee: this.deliveryFee,
+              items: this.cartItems.map(item => ({
+                product_id: item.product_id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+              }))
+            };
+            
+            await this.ngZone.run(() => {
+              return runInInjectionContext(this.injector, async () => {
+                await this.firestore.collection('orders').doc(orderReference).set(orderData);
+                await this.firestore.collection('payments').doc(response.reference).set({
+                  order_reference: orderReference,
+                  amount: this.total,
+                  status: 'successful',
+                  created_at: new Date(),
+                  payment_method: 'paystack',
+                  user_id: this.userId
+                });
+              });
+            });
+            
+            await this.processCheckout(orderReference);
+            loading.dismiss();
+            
+            // Show success message
+            const alert = await this.alertController.create({
+              header: 'Order Placed!',
+              message: 'Your payment was successful and your order will be delivered to your address.',
+              buttons: [{
+                text: 'OK',
+                handler: () => {
+                  this.router.navigate(['/order-confirmation'], {
+                    queryParams: {
+                      orderId: orderReference,
+                      paymentRef: response.reference,
+                      deliveryMethod: this.deliveryMethod
+                    }
+                  });
+                }
+              }]
+            });
+            await alert.present();
+          } catch (error) {
+            console.error('Error processing order:', error);
+            loading.dismiss();
+            this.presentToast('Error processing your order. Please try again.');
+          }
+        },
+        onError: async (error: any) => {
+          console.error('Payment error:', error);
+          loading.dismiss();
+          await this.presentToast(`Payment error: ${error.message || 'Unknown error occurred'}`);
+        }
+      });
+
+      handler.openIframe();
+    } catch (error) {
+      loading.dismiss();
+      console.error('Error initializing payment:', error);
+      this.presentToast('Failed to initialize payment. Please try again.');
+    }
+  }
+
+  async saveNewAddress() {
+    if (!this.addressForm.valid || !this.userId) return;
+    
+    const newAddress: CustomerAddress = {
+      ...this.addressForm.value,
+      user_id: this.userId,
+      address_id: null // Will be set by Firestore
+    };
+    
+    try {
+      // Check if this is set as default and we need to update other addresses
+      if (newAddress.is_default) {
+        // Find all existing default addresses and update them
+        const defaultAddressesSnapshot = await this.ngZone.run(() => {
+          return runInInjectionContext(this.injector, async () => {
+            return this.firestore
+              .collection<CustomerAddress>('customer_addresses', ref => 
+                ref.where('user_id', '==', this.userId)
+                  .where('is_default', '==', true))
+              .get()
+              .toPromise();
+          });
+        });
+        
+        if (defaultAddressesSnapshot) {
+          const batch = this.firestore.firestore.batch();
+          defaultAddressesSnapshot.docs.forEach(doc => {
+            batch.update(doc.ref, { is_default: false });
+          });
+          await batch.commit();
+        }
+      }
+      
+      // Add the new address
+      const docRef = await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore.collection('customer_addresses').add(newAddress);
+        });
+      });
+      
+      // Update local saved addresses list
+      newAddress.address_id = docRef.id;
+      this.savedAddresses = [...this.savedAddresses, newAddress];
+      this.selectedAddressId = docRef.id;
+      
+      // Reset form and hide it
+      this.addressForm.reset();
+      this.showNewAddressForm = false;
+      
+    } catch (error) {
+      console.error('Error saving new address:', error);
+      await this.presentToast('Failed to save your address. Please try again.');
+      throw error; // Rethrow to handle in the calling function
+    }
   }
 
   async presentAuthAlert() {
@@ -314,7 +607,7 @@ export class CartPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  async processCheckout(paymentReference: string) {
+  async processCheckout(reference: string) {
     // Show loading indicator
     const loading = await this.loadingController.create({
       message: 'Processing your order...',
@@ -326,7 +619,8 @@ export class CartPage implements OnInit, OnDestroy {
       // Add payment reference to the cart items
       const cartItemsWithPayment = this.cartItems.map(item => ({
         ...item,
-        payment_reference: paymentReference
+        payment_reference: reference,
+        delivery_method: this.deliveryMethod
       }));
       
       // Send the full item details to the checkout method
@@ -337,7 +631,9 @@ export class CartPage implements OnInit, OnDestroy {
       // Show success message
       const alert = await this.alertController.create({
         header: 'Order Placed!',
-        message: 'Your payment was successful and your order has been placed.',
+        message: this.deliveryMethod === 'online' 
+          ? 'Your payment was successful and your order has been placed.'
+          : 'Your order has been placed and will be delivered to your address. Payment will be collected upon delivery.',
         buttons: [{
           text: 'OK',
           handler: () => {
@@ -345,7 +641,8 @@ export class CartPage implements OnInit, OnDestroy {
             this.router.navigate(['/order-confirmation'], { 
               queryParams: { 
                 orderId: result.sale_id,
-                paymentRef: paymentReference
+                paymentRef: reference,
+                deliveryMethod: this.deliveryMethod
               } 
             });
           }
@@ -377,4 +674,277 @@ export class CartPage implements OnInit, OnDestroy {
   getItemTotal(item: CartItem): string {
     return this.formatCurrency(item.price * item.quantity);
   }
+  
+// Toggle between showing new address form and saved addresses
+toggleNewAddressForm() {
+  this.showNewAddressForm = !this.showNewAddressForm;
+  if (this.showNewAddressForm) {
+    this.addressForm.reset({
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      state: '',
+      postal_code: '',
+      country: '',
+      is_default: false
+    });
+  } else {
+    // If hiding form, ensure we have a selected address if available
+    if (this.savedAddresses.length > 0 && !this.selectedAddressId) {
+      this.selectedAddressId = this.savedAddresses[0].address_id;
+    }
+  }
+}
+
+// Handle delivery method change
+deliveryMethodChanged() {
+  // If switching to delivery, load addresses if not done yet
+  if (this.deliveryMethod === 'delivery' && this.userId && this.savedAddresses.length === 0) {
+    this.loadSavedAddresses();
+  }
+  
+  // If switching to online payment, reset address form visibility
+  if (this.deliveryMethod === 'online') {
+    this.showNewAddressForm = false;
+  }
+}
+
+// Delete a saved address
+async deleteAddress(addressId: string) {
+  const alert = await this.alertController.create({
+    header: 'Delete Address',
+    message: 'Are you sure you want to delete this address?',
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Delete',
+        role: 'destructive',
+        handler: async () => {
+          try {
+            await this.ngZone.run(() => {
+              return runInInjectionContext(this.injector, async () => {
+                return this.firestore.doc(`customer_addresses/${addressId}`).delete();
+              });
+            });
+            
+            // Update local saved addresses list
+            this.savedAddresses = this.savedAddresses.filter(addr => addr.address_id !== addressId);
+            
+            // If the deleted address was selected, select another one
+            if (this.selectedAddressId === addressId) {
+              this.selectedAddressId = this.savedAddresses.length > 0 ? this.savedAddresses[0].address_id : null;
+            }
+            
+            await this.presentToast('Address deleted successfully');
+          } catch (error) {
+            console.error('Error deleting address:', error);
+            await this.presentToast('Failed to delete address. Please try again.');
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
+}
+
+// Edit a saved address
+editAddress(address: CustomerAddress) {
+  this.showNewAddressForm = true;
+  this.addressForm.setValue({
+    address_line1: address.address_line1,
+    address_line2: address.address_line2 || '',
+    city: address.city,
+    state: address.state,
+    postal_code: address.postal_code,
+    country: address.country,
+    is_default: address.is_default
+  });
+  
+  // Store the editing address ID
+  this.addressForm.addControl('address_id', this.formBuilder.control(address.address_id));
+  
+  // Scroll to the form
+  setTimeout(() => {
+    const formElement = document.querySelector('.address-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, 100);
+}
+
+// Save edited address
+async saveEditedAddress() {
+  if (!this.addressForm.valid) {
+    this.markFormGroupTouched(this.addressForm);
+    this.presentToast('Please fill in all required address fields');
+    return;
+  }
+  
+  const formValues = this.addressForm.value;
+  const addressId = formValues.address_id;
+  
+  try {
+    // Check if this is set as default and we need to update other addresses
+    if (formValues.is_default) {
+      // Find all existing default addresses and update them
+      const defaultAddressesSnapshot = await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore
+            .collection<CustomerAddress>('customer_addresses', ref => 
+              ref.where('user_id', '==', this.userId)
+                .where('is_default', '==', true)
+                .where('address_id', '!=', addressId))
+            .get()
+            .toPromise();
+        });
+      });
+      
+      if (defaultAddressesSnapshot) {
+        const batch = this.firestore.firestore.batch();
+        defaultAddressesSnapshot.docs.forEach(doc => {
+          batch.update(doc.ref, { is_default: false });
+        });
+        await batch.commit();
+      }
+    }
+    
+    // Update the address
+    const updatedAddress: Partial<CustomerAddress> = {
+      address_line1: formValues.address_line1,
+      address_line2: formValues.address_line2,
+      city: formValues.city,
+      state: formValues.state,
+      postal_code: formValues.postal_code,
+      country: formValues.country,
+      is_default: formValues.is_default
+    };
+    
+    await this.ngZone.run(() => {
+      return runInInjectionContext(this.injector, async () => {
+        return this.firestore.doc(`customer_addresses/${addressId}`).update(updatedAddress);
+      });
+    });
+    
+    // Update local saved addresses list
+    this.savedAddresses = this.savedAddresses.map(addr => 
+      addr.address_id === addressId ? {...addr, ...updatedAddress} : addr
+    );
+    
+    // Reset form and hide it
+    this.addressForm.removeControl('address_id');
+    this.addressForm.reset();
+    this.showNewAddressForm = false;
+    this.selectedAddressId = addressId;
+    
+    await this.presentToast('Address updated successfully');
+  } catch (error) {
+    console.error('Error updating address:', error);
+    await this.presentToast('Failed to update address. Please try again.');
+  }
+}
+
+// Helper method to check if there's an ID in the form (for edit mode)
+isEditingAddress(): boolean {
+  return this.addressForm.get('address_id') !== null;
+}
+
+// Submit the address form (for add or edit)
+async submitAddressForm() {
+  if (!this.userId) {
+    this.presentToast('User not logged in. Please log in to save addresses.');
+    await this.openLoginComponent();
+    return;
+  }
+
+  if (!this.addressForm.valid) {
+    this.markFormGroupTouched(this.addressForm);
+    this.presentToast('Please fill in all required address fields');
+    return;
+  }
+
+  try {
+    const formData = this.addressForm.value;
+    
+    if (this.isEditingAddress()) {
+      await this.saveEditedAddress();
+    } else {
+      // Create new address document
+      const newAddress: CustomerAddress = {
+        ...formData,
+        user_id: this.userId,
+        created_at: new Date(),
+        address_id: null
+      };
+
+      // If this is set as default, update other addresses first
+      if (newAddress.is_default) {
+        const batch = this.firestore.firestore.batch();
+        const defaultAddresses = await this.ngZone.run(() => {
+          return runInInjectionContext(this.injector, async () => {
+            return this.firestore
+              .collection<CustomerAddress>('customer_addresses')
+              .ref.where('user_id', '==', this.userId)
+              .where('is_default', '==', true)
+              .get();
+          });
+        });
+
+        defaultAddresses.docs.forEach(doc => {
+          batch.update(doc.ref, { is_default: false });
+        });
+        await batch.commit();
+      }
+
+      // Add the new address with ngZone and runInInjectionContext
+      const docRef = await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore.collection('customer_addresses').add(newAddress);
+        });
+      });
+
+      // Update local state
+      newAddress.address_id = docRef.id;
+      this.savedAddresses = [...this.savedAddresses, newAddress];
+      this.selectedAddressId = docRef.id;
+      
+      // Reset form and hide it
+      this.addressForm.reset();
+      this.showNewAddressForm = false;
+      
+      await this.presentToast('Address saved successfully');
+    }
+  } catch (error) {
+    console.error('Error saving address:', error);
+    await this.presentToast('Failed to save address. Please try again.');
+  }
+}
+
+private async openLoginComponent() {
+  const alert = await this.alertController.create({
+    header: 'Login Required',
+    message: 'Please log in to continue with your payment',
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Login',
+        handler: () => {
+          // Navigate to login with return URL
+          this.router.navigate(['/login'], {
+            queryParams: {
+              returnUrl: '/cart',
+              action: 'payment'
+            }
+          });
+        }
+      }
+    ]
+  });
+  await alert.present();
+}
 }
