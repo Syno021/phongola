@@ -7,6 +7,7 @@ import { ModalController, ToastController, AlertController } from '@ionic/angula
 import { FormBuilder } from '@angular/forms';
 import { OrderDetailsModalComponent } from '../order-details-modal/order-details-modal.component';
 import { Subscription } from 'rxjs';
+import emailjs from 'emailjs-com';
 
 @Component({
   selector: 'app-order-management',
@@ -166,9 +167,57 @@ export class OrderManagementPage implements OnInit, OnDestroy {
         });
       });
       this.presentToast('Order status updated successfully');
+
+      // Get the order details to access user's email
+      const order = this.orders.find(o => o.id === orderId);
+      if (!order || !order.user_email) {
+        throw new Error('User email not found');
+      }
+
+      const statusMessage = this.getStatusMessage(newStatus);
+      const emailParams = {
+        email_to: order.user_email,
+        from_email: 'Phongolo Services',
+        subject: 'Order Status Update - Phongolo Services',
+        from_name: 'Phongolo Services',
+        message: `Dear Valued Customer,
+
+        We hope this email finds you well. We would like to inform you that your order (Reference: ${order.order_reference}) has been updated to: ${newStatus}.
+
+        ${statusMessage}
+
+        Order Details:
+        - Order Reference: ${order.order_reference}
+        - Status: ${newStatus}
+        - Last Updated: ${new Date().toLocaleDateString()}
+
+        If you have any questions or concerns about your order, please don't hesitate to contact our customer support team.
+
+        Thank you for choosing Phongolo Services.
+
+        Best regards,
+        The Phongolo Services Team`
+              };
+
+      await emailjs.send('service_1q81bzl', 'template_6j0vslg', emailParams, 'xmsEiY-Qslnb6fSZE');
     } catch (error) {
       console.error('Error updating order status:', error);
       this.presentToast('Failed to update order status. Please try again.');
+    }
+  }
+
+  private getStatusMessage(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'processing':
+        return 'Your order is now being processed by our team.';
+      case 'shipped':
+        return 'Your order has been shipped and is on its way to you.';
+      case 'delivered':
+        return 'Your order has been successfully delivered. We hope you are satisfied with your purchase.';
+      case 'canceled':
+        return 'Your order has been canceled as requested.';
+      default:
+        return 'We have received your order and will process it shortly.';
     }
   }
 

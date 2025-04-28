@@ -1,0 +1,256 @@
+// Main containers
+.loading-container,
+.login-container,
+.empty-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+// Profile icon styling for login page
+.profile-icon {
+  font-size: 6rem;
+  color: var(--ion-color-primary);
+  margin-bottom: 1rem;
+}
+
+// Centered content styles
+.content-center {
+  width: 100%;
+  max-width: 400px;
+  
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin-bottom: 2rem;
+  }
+}
+
+// Login button styling
+.login-button {
+  margin-top: 1rem;
+  --border-radius: 8px;
+}
+
+// Profile container spacing
+.profile-container {
+  padding: 1rem;
+}
+
+// Profile card styling
+.profile-card {
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  
+  .profile-header {
+    display: flex;
+    align-items: center;
+    padding-bottom: 1rem;
+    
+    ion-avatar {
+      width: 64px;
+      height: 64px;
+      margin-right: 1rem;
+      border: 2px solid var(--ion-color-primary);
+    }
+    
+    .user-info {
+      flex: 1;
+      
+      ion-card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+      
+      ion-card-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
+// Form styling
+ion-list {
+  background: transparent;
+}
+
+// Save button styling
+.save-button {
+  margin-top: 1.5rem;
+  --border-radius: 8px;
+}
+
+// Orders section styling
+.orders-section {
+  margin-top: 2rem;
+  
+  ion-item-divider {
+    --background: transparent;
+    --padding-start: 0;
+    
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0.5rem 0;
+    }
+  }
+}
+
+// Order card styling
+.order-card {
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:active {
+    transform: scale(0.98);
+  }
+  
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.8rem;
+    
+    h3 {
+      font-weight: 600;
+      margin: 0;
+      font-size: 1rem;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      font-size: 0.8rem;
+      margin: 0.3rem 0 0;
+    }
+  }
+
+  // Status badge styling
+  .status-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+  
+  .status-processing {
+    background-color: rgba(var(--ion-color-warning-rgb), 0.15);
+    color: var(--ion-color-warning-shade);
+  }
+  
+  .status-shipped {
+    background-color: rgba(var(--ion-color-primary-rgb), 0.15);
+    color: var(--ion-color-primary-shade);
+  }
+  
+  .status-delivered {
+    background-color: rgba(var(--ion-color-success-rgb), 0.15);
+    color: var(--ion-color-success-shade);
+  }
+  
+  .status-cancelled {
+    background-color: rgba(var(--ion-color-danger-rgb), 0.15);
+    color: var(--ion-color-danger-shade);
+  }
+  
+  // Order item styling
+  .order-item {
+    --padding-start: 0;
+    --padding-end: 0;
+    --inner-padding-end: 0;
+    --min-height: 60px;
+    
+    ion-thumbnail {
+      --border-radius: 8px;
+      width: 50px;
+      height: 50px;
+    }
+    
+    h4 {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin: 0 0 0.3rem;
+    }
+    
+    p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--ion-color-medium);
+    }
+    
+    .item-price {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .more-items {
+    --background: rgba(var(--ion-color-light-rgb), 0.5);
+    margin-top: 0.5rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+  }
+  
+  // Order footer with total and button
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(var(--ion-border-color-rgb), 0.3);
+    
+    .total {
+      font-size: 0.9rem;
+      
+      .total-amount {
+        font-weight: 700;
+        margin-left: 0.5rem;
+        color: var(--ion-color-dark);
+      }
+    }
+  }
+}
+
+// Empty orders state
+.empty-orders {
+  height: auto;
+  padding-top: 2rem;
+  
+  ion-icon {
+    font-size: 4rem;
+    color: var(--ion-color-medium);
+    opacity: 0.7;
+    margin-bottom: 1rem;
+  }
+  
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin-bottom: 2rem;
+  }
+  
+  ion-button {
+    --border-radius: 8px;
+    max-width: 200px;
+  }
+}

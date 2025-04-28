@@ -11,8 +11,8 @@
         <ion-icon name="cart-outline"></ion-icon>
         <ion-badge *ngIf="cartItemCount > 0" color="danger" class="animate-fade-in">{{cartItemCount}}</ion-badge>
       </ion-button>
-      <ion-button (click)="logout()" class="cart-button">
-        <ion-icon name="log-out-outline"></ion-icon>
+      <ion-button (click)="navigateToProfile()" class="cart-button">
+        <ion-icon name="person-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>

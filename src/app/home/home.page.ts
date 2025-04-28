@@ -243,4 +243,8 @@ export class HomePage implements OnInit, OnDestroy {
       this.presentToast('Error logging out');
     }
   }
+
+  navigateToProfile() {
+    this.router.navigate(['/profile']);
+  }
 }
