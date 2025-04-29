@@ -4,8 +4,11 @@
       Pongola Detergents
     </ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="openModal()" class="cart-button">
+      <ion-button (click)="openModal()" class="cart-button" *ngIf="!currentUser">
         LOGIN
+      </ion-button>
+      <ion-button class="cart-button" *ngIf="currentUser">
+        {{ currentUser }}
       </ion-button>
       <ion-button (click)="navigateToCart()" class="cart-button">
         <ion-icon name="cart-outline"></ion-icon>

@@ -42,7 +42,7 @@
             <img [src]="user.photoURL || 'assets/default-avatar.png'" alt="Profile Photo">
           </ion-avatar>
           <div class="user-info">
-            <ion-card-title>{{ profileForm.get('name')?.value || user.displayName || 'User' }}</ion-card-title>
+            <ion-card-title>{{ profileForm.get('name')?.value || user.username || 'User' }}</ion-card-title>
             <ion-card-subtitle>{{ user.email }}</ion-card-subtitle>
           </div>
         </div>

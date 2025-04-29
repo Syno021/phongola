@@ -33,6 +33,7 @@ export class HomePage implements OnInit, OnDestroy {
   searchTerm: string = '';
   selectedPriceRange: string = 'all';
   selectedSize: string[] = [];
+  currentUser: string | null = null;
 
   constructor(
     private modalCtrl: ModalController,
@@ -51,21 +52,36 @@ export class HomePage implements OnInit, OnDestroy {
     await this.loadPromotions();
     
     // Check if user is already logged in
-    this.auth.authState.subscribe(async (user) => {
-      if (!user) {
-        const modal = await this.modalCtrl.create({
-          component: LoginComponent,
-          backdropDismiss: false,
-          cssClass: 'login-modal'
-        });
-        
-        await modal.present();
-        
-        // Handle the modal result
-        const { data, role } = await modal.onDidDismiss();
-        console.log('Modal dismissed with data:', data, 'and role:', role);
-      }
+this.auth.authState.subscribe(async (user) => {
+  if (!user) {
+    const modal = await this.modalCtrl.create({
+      component: LoginComponent,
+      backdropDismiss: false,
+      cssClass: 'login-modal'
     });
+    
+    await modal.present();
+    const { data, role } = await modal.onDidDismiss();
+  } else {
+    try {
+      const userData = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, async () => {
+          const userDoc = await this.firestore.collection('users').doc(user.uid).get().toPromise();
+          return userDoc ? (userDoc.data() as { username?: string }) : null;
+        })
+      );
+      
+      this.currentUser = 
+        (userData && userData.username) || 
+        user.displayName || 
+        user.email || 
+        'User';
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      this.currentUser = user.displayName || user.email || 'User';
+    }
+  }
+});
     
     // Subscribe to cart updates
     this.cartSubscription = this.cartService.cartItems$.subscribe(cartMap => {
