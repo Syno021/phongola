@@ -1,4 +1,4 @@
-import { Component, OnInit, Injector, NgZone, OnDestroy } from '@angular/core';
+import { Component, OnInit, Injector, OnDestroy } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Router } from '@angular/router';
@@ -7,18 +7,19 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { runInInjectionContext } from '@angular/core';
 import { LoginComponent } from '../login/login.component';
 import { Subscription } from 'rxjs';
+import { User, UserRole } from '../shared/models/user';
 
-interface DeliveryAddress {
+interface CustomerAddress {
   address_id: string;
+  user_id: string;
   address_line1: string;
   address_line2: string;
   city: string;
-  country: string;
-  created_at: any;
-  is_default: boolean;
-  postal_code: string;
   state: string;
-  user_id: string;
+  postal_code: string;
+  country: string;
+  is_default: boolean;
+  created_at: any;
 }
 
 interface OrderItem {
@@ -33,7 +34,7 @@ interface Order {
   amount: number;
   created_at: any;
   updated_at: any;
-  delivery_address: DeliveryAddress;
+  delivery_address: CustomerAddress;
   delivery_fee: number;
   delivery_method: string;
   items: OrderItem[];
@@ -51,13 +52,15 @@ interface Order {
   standalone: false,
 })
 export class ProfilePage implements OnInit, OnDestroy {
-  user: any = null;
+  user: User | null = null;
+  addresses: CustomerAddress[] = [];
   profileForm: FormGroup;
   orders: Order[] = [];
   isLoading = true;
   userSubscription!: Subscription;
   ordersSubscription!: Subscription;
-  
+  addressesSubscription!: Subscription;
+
   constructor(
     private modalCtrl: ModalController,
     private auth: AngularFireAuth,
@@ -68,13 +71,11 @@ export class ProfilePage implements OnInit, OnDestroy {
     private injector: Injector
   ) {
     this.profileForm = this.formBuilder.group({
-      name: ['', Validators.required],
+      first_name: ['', Validators.required],
+      last_name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', Validators.pattern('[0-9]{10}')],
-      address: [''],
-      city: [''],
-      state: [''],
-      zipcode: ['']
+      username: ['', Validators.required],
+      role: ['']
     });
   }
 
@@ -89,13 +90,15 @@ export class ProfilePage implements OnInit, OnDestroy {
     if (this.ordersSubscription) {
       this.ordersSubscription.unsubscribe();
     }
+    if (this.addressesSubscription) {
+      this.addressesSubscription.unsubscribe();
+    }
   }
 
   checkAuthStatus() {
     this.userSubscription = this.auth.authState.subscribe(user => {
       this.isLoading = false;
       if (user) {
-        this.user = user;
         this.loadUserProfile(user.uid);
         this.loadUserOrders(user.uid);
       } else {
@@ -109,19 +112,34 @@ export class ProfilePage implements OnInit, OnDestroy {
     runInInjectionContext(this.injector, () => {
       this.firestore.collection('users').doc(userId).get().subscribe((doc) => {
         if (doc.exists) {
-          const userData = doc.data() as any;
+          const userData = doc.data() as User;
+          this.user = userData;
           this.profileForm.patchValue({
-            name: userData.name || '',
-            email: userData.email || this.user.email || '',
-            phone: userData.phone || '',
-            address: userData.address || '',
-            city: userData.city || '',
-            state: userData.state || '',
-            zipcode: userData.zipcode || ''
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || '',
+            email: userData.email || '',
+            username: userData.username || '',
+            role: userData.role || UserRole.CUSTOMER
           });
+          this.loadCustomerAddresses(userId);
         }
       });
     });
+  }
+
+  loadCustomerAddresses(userId: string) {
+    this.addressesSubscription = this.firestore
+      .collection('customer_addresses', ref => 
+        ref.where('user_id', '==', userId)
+      )
+      .snapshotChanges()
+      .subscribe(actions => {
+        this.addresses = actions.map(action => {
+          const data = action.payload.doc.data() as CustomerAddress;
+          const address_id = action.payload.doc.id;
+          return { ...data, address_id };
+        });
+      });
   }
 
   loadUserOrders(userId: string) {
@@ -177,10 +195,12 @@ export class ProfilePage implements OnInit, OnDestroy {
     if (!this.user || !this.profileForm.valid) return;
     
     try {
-      await this.firestore.collection('users').doc(this.user.uid).set(
-        this.profileForm.value, 
-        { merge: true }
-      );
+      runInInjectionContext(this.injector, async () => {
+        await this.firestore.collection('users').doc(this.user!.user_id).set(
+          this.profileForm.value, 
+          { merge: true }
+        );
+      });
       
       this.presentToast('Profile updated successfully');
     } catch (error) {

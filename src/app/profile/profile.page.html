@@ -39,10 +39,10 @@
       <ion-card-header>
         <div class="profile-header">
           <ion-avatar>
-            <img [src]="user.photoURL || 'assets/default-avatar.png'" alt="Profile Photo">
+            <img src="assets/default-avatar.png" alt="Profile Photo">
           </ion-avatar>
           <div class="user-info">
-            <ion-card-title>{{ profileForm.get('name')?.value || user.username || 'User' }}</ion-card-title>
+            <ion-card-title>{{ user.first_name }} {{ user.last_name }}</ion-card-title>
             <ion-card-subtitle>{{ user.email }}</ion-card-subtitle>
           </div>
         </div>
@@ -52,45 +52,24 @@
         <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
           <ion-list lines="full">
             <ion-item>
-              <ion-label position="floating">Full Name</ion-label>
-              <ion-input formControlName="name" type="text"></ion-input>
+              <ion-label position="floating">First Name</ion-label>
+              <ion-input formControlName="first_name" type="text"></ion-input>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label position="floating">Last Name</ion-label>
+              <ion-input formControlName="last_name" type="text"></ion-input>
+            </ion-item>
+
+            <ion-item>
+              <ion-label position="floating">Username</ion-label>
+              <ion-input formControlName="username" type="text"></ion-input>
             </ion-item>
             
             <ion-item>
               <ion-label position="floating">Email</ion-label>
-              <ion-input formControlName="email" type="email" [readonly]="true"></ion-input>
+              <ion-input formControlName="email" type="email" readonly></ion-input>
             </ion-item>
-            
-            <ion-item>
-              <ion-label position="floating">Phone Number</ion-label>
-              <ion-input formControlName="phone" type="tel"></ion-input>
-            </ion-item>
-            
-            <ion-item>
-              <ion-label position="floating">Address</ion-label>
-              <ion-input formControlName="address" type="text"></ion-input>
-            </ion-item>
-            
-            <ion-row>
-              <ion-col size="6">
-                <ion-item>
-                  <ion-label position="floating">City</ion-label>
-                  <ion-input formControlName="city" type="text"></ion-input>
-                </ion-item>
-              </ion-col>
-              <ion-col size="3">
-                <ion-item>
-                  <ion-label position="floating">State</ion-label>
-                  <ion-input formControlName="state" type="text"></ion-input>
-                </ion-item>
-              </ion-col>
-              <ion-col size="3">
-                <ion-item>
-                  <ion-label position="floating">Zip</ion-label>
-                  <ion-input formControlName="zipcode" type="text"></ion-input>
-                </ion-item>
-              </ion-col>
-            </ion-row>
           </ion-list>
           
           <ion-button expand="block" type="submit" [disabled]="!profileForm.valid" class="save-button">
@@ -101,7 +80,27 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- Order Tracking Section -->
+    <!-- Addresses Section -->
+    <ion-card class="addresses-card">
+      <ion-card-header>
+        <ion-card-title>My Addresses</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let address of addresses">
+            <ion-label>
+              <h3>{{ address.address_line1 }}</h3>
+              <p *ngIf="address.address_line2">{{ address.address_line2 }}</p>
+              <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+              <p>{{ address.country }}</p>
+            </ion-label>
+            <ion-badge slot="end" color="primary" *ngIf="address.is_default">Default</ion-badge>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Orders Section -->
     <div class="orders-section">
       <ion-item-divider sticky>
         <ion-label>
