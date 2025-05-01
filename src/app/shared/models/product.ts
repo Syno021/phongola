@@ -23,4 +23,5 @@ export interface Product {
     image_url: string;
     created_at: Date;
     updated_at: Date;
+    low_stock_threshold?: number;
   }

@@ -1,4 +1,4 @@
-// HomePage Component - Updated implementation
+// HomePage Component - Updated implementation with stock validation
 import { Component, OnInit, Injector, NgZone, OnDestroy } from '@angular/core';
 import { Product, ProductCategory } from '../shared/models/product';
 import { Promotion } from '../shared/models/promotion';
@@ -52,36 +52,36 @@ export class HomePage implements OnInit, OnDestroy {
     await this.loadPromotions();
     
     // Check if user is already logged in
-this.auth.authState.subscribe(async (user) => {
-  if (!user) {
-    const modal = await this.modalCtrl.create({
-      component: LoginComponent,
-      backdropDismiss: false,
-      cssClass: 'login-modal'
+    this.auth.authState.subscribe(async (user) => {
+      if (!user) {
+        const modal = await this.modalCtrl.create({
+          component: LoginComponent,
+          backdropDismiss: false,
+          cssClass: 'login-modal'
+        });
+        
+        await modal.present();
+        const { data, role } = await modal.onDidDismiss();
+      } else {
+        try {
+          const userData = await this.ngZone.run(() =>
+            runInInjectionContext(this.injector, async () => {
+              const userDoc = await this.firestore.collection('users').doc(user.uid).get().toPromise();
+              return userDoc ? (userDoc.data() as { username?: string }) : null;
+            })
+          );
+          
+          this.currentUser = 
+            (userData && userData.username) || 
+            user.displayName || 
+            user.email || 
+            'User';
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          this.currentUser = user.displayName || user.email || 'User';
+        }
+      }
     });
-    
-    await modal.present();
-    const { data, role } = await modal.onDidDismiss();
-  } else {
-    try {
-      const userData = await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, async () => {
-          const userDoc = await this.firestore.collection('users').doc(user.uid).get().toPromise();
-          return userDoc ? (userDoc.data() as { username?: string }) : null;
-        })
-      );
-      
-      this.currentUser = 
-        (userData && userData.username) || 
-        user.displayName || 
-        user.email || 
-        'User';
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      this.currentUser = user.displayName || user.email || 'User';
-    }
-  }
-});
     
     // Subscribe to cart updates
     this.cartSubscription = this.cartService.cartItems$.subscribe(cartMap => {
@@ -139,8 +139,19 @@ this.auth.authState.subscribe(async (user) => {
   }
 
   increaseQuantity(product: Product) {
+    // Only allow increasing quantity if product is in stock and not exceeding available stock
+    if (product.stock_quantity <= 0) {
+      this.presentToast('This product is out of stock');
+      return;
+    }
+    
     const currentQty = this.tempQuantities.get(product.product_id) || 0;
-    this.tempQuantities.set(product.product_id, currentQty + 1);
+    // Make sure we don't add more than what's in stock
+    if (currentQty < product.stock_quantity) {
+      this.tempQuantities.set(product.product_id, currentQty + 1);
+    } else {
+      this.presentToast(`Only ${product.stock_quantity} units available in stock`);
+    }
   }
 
   decreaseQuantity(product: Product) {
@@ -155,14 +166,27 @@ this.auth.authState.subscribe(async (user) => {
   }
 
   async addToCart(product: Product) {
+    // Check if product is in stock
+    if (product.stock_quantity <= 0) {
+      this.presentToast('Sorry, this product is out of stock');
+      return;
+    }
+    
     const quantity = this.getQuantity(product);
     if (quantity > 0) {
-      this.cartService.addToCart(product, quantity);
+      // Make sure the quantity doesn't exceed available stock
+      const validQuantity = Math.min(quantity, product.stock_quantity);
+      
+      if (validQuantity !== quantity) {
+        this.presentToast(`Only ${product.stock_quantity} units available. Adding ${validQuantity} to cart.`);
+      }
+      
+      this.cartService.addToCart(product, validQuantity);
       this.tempQuantities.set(product.product_id, 0); // Reset quantity after adding to cart
       
       // Display a toast notification
       const toast = await this.toastController.create({
-        message: `${quantity} ${product.name} added to cart`,
+        message: `${validQuantity} ${product.name} added to cart`,
         duration: 2000,
         position: 'bottom'
       });

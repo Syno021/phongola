@@ -19,7 +19,7 @@ export class AdminInventoryPage implements OnInit {
   selectedSegment = 'add';
   showForm = false;
   categories = ProductCategory;
-  ProductCategory = ProductCategory; // Add this line to expose enum to template
+  ProductCategory = ProductCategory;
   productForm: FormGroup;
   editForm: FormGroup;
   selectedFile: File | null = null;
@@ -29,6 +29,13 @@ export class AdminInventoryPage implements OnInit {
   searchTerm = '';
   editingProduct: Product | null = null;
   promotions: Promotion[] = [];
+  
+  // Default low stock threshold (used when product doesn't specify its own)
+  defaultLowStockThreshold = 5;
+  
+  // Stock filtering options
+  stockFilterOption = 'all'; // 'all', 'low', 'out'
+  originalFilteredProducts: Product[] = []; // To store original filtered products before stock filter
 
   constructor(
     private auth: AngularFireAuth,
@@ -45,8 +52,9 @@ export class AdminInventoryPage implements OnInit {
       price: ['', [Validators.required, Validators.min(0)]],
       stock_quantity: ['', [Validators.required, Validators.min(0)]],
       category: ['', [Validators.required]],
-      image_url: [''], // Made optional since it's handled separately
-      promotion_id: [null]
+      image_url: [''],
+      promotion_id: [null],
+      low_stock_threshold: [this.defaultLowStockThreshold, [Validators.min(1)]]
     });
 
     this.editForm = this.formBuilder.group({
@@ -56,7 +64,8 @@ export class AdminInventoryPage implements OnInit {
       stock_quantity: ['', [Validators.required, Validators.min(0)]],
       category: ['', [Validators.required]],
       image_url: [''],
-      promotion_id: [null]
+      promotion_id: [null],
+      low_stock_threshold: [this.defaultLowStockThreshold, [Validators.min(1)]]
     });
 
     this.loadPromotions();
@@ -76,8 +85,22 @@ export class AdminInventoryPage implements OnInit {
         )
       );
 
-      this.products = snapshot?.docs.map(doc => doc.data() as Product) || [];
+      this.products = snapshot?.docs.map(doc => {
+        const product = doc.data() as Product;
+        // Set default low stock threshold for products that don't have one
+        if (product.low_stock_threshold === undefined) {
+          product.low_stock_threshold = this.defaultLowStockThreshold;
+        }
+        return product;
+      }) || [];
+      
       this.filterProducts();
+      
+      // Check if any products have low stock and notify
+      const lowStockCount = this.getLowStockCount();
+      if (lowStockCount > 0) {
+        this.showToast(`Warning: ${lowStockCount} product(s) have low stock!`, 'warning');
+      }
     } catch (error) {
       console.error('Error loading products:', error);
       this.showToast('Error loading products');
@@ -100,15 +123,36 @@ export class AdminInventoryPage implements OnInit {
 
   filterProducts() {
     if (!this.searchTerm) {
-      this.filteredProducts = [...this.products];
-      return;
+      this.originalFilteredProducts = [...this.products];
+    } else {
+      const searchLower = this.searchTerm.toLowerCase();
+      this.originalFilteredProducts = this.products.filter(product =>
+        product.name.toLowerCase().includes(searchLower) ||
+        product.description.toLowerCase().includes(searchLower)
+      );
     }
-
-    const searchLower = this.searchTerm.toLowerCase();
-    this.filteredProducts = this.products.filter(product =>
-      product.name.toLowerCase().includes(searchLower) ||
-      product.description.toLowerCase().includes(searchLower)
-    );
+    
+    // Apply current stock filter
+    this.applyStockFilter();
+  }
+  
+  applyStockFilter() {
+    switch (this.stockFilterOption) {
+      case 'low':
+        this.filteredProducts = this.originalFilteredProducts.filter(product => this.isLowStock(product));
+        break;
+      case 'out':
+        this.filteredProducts = this.originalFilteredProducts.filter(product => this.isOutOfStock(product));
+        break;
+      default: // 'all'
+        this.filteredProducts = [...this.originalFilteredProducts];
+        break;
+    }
+  }
+  
+  filterLowStockOnly() {
+    this.stockFilterOption = 'low';
+    this.applyStockFilter();
   }
 
   segmentChanged(event: any) {
@@ -168,7 +212,9 @@ export class AdminInventoryPage implements OnInit {
       );
 
       this.showToast('Product added successfully');
-      this.productForm.reset();
+      this.productForm.reset({
+        low_stock_threshold: this.defaultLowStockThreshold // Reset with default value
+      });
       this.selectedFile = null;
     } catch (error) {
       console.error(error);
@@ -203,7 +249,8 @@ export class AdminInventoryPage implements OnInit {
       stock_quantity: product.stock_quantity,
       category: product.category,
       image_url: product.image_url,
-      promotion_id: product.promotion_id || null
+      promotion_id: product.promotion_id || null,
+      low_stock_threshold: product.low_stock_threshold || this.defaultLowStockThreshold
     });
   }
 
@@ -283,6 +330,47 @@ export class AdminInventoryPage implements OnInit {
     
     return product.price * (1 - promotion.discount_percentage / 100);
   }
+  
+  // Stock status methods
+  isLowStock(product: Product): boolean {
+    const threshold = product.low_stock_threshold || this.defaultLowStockThreshold;
+    return product.stock_quantity > 0 && product.stock_quantity <= threshold;
+  }
+  
+  isOutOfStock(product: Product): boolean {
+    return product.stock_quantity <= 0;
+  }
+  
+  getLowStockCount(): number {
+    return this.products.filter(product => this.isLowStock(product)).length;
+  }
+  
+  getStockStatusColor(product: Product): string {
+    if (this.isOutOfStock(product)) {
+      return 'light';  // Grey background for out of stock
+    } else if (this.isLowStock(product)) {
+      return 'warning-tint'; // Light yellow/orange background for low stock
+    }
+    return ''; // Default background
+  }
+  
+  getStockStatusIcon(product: Product): string {
+    if (this.isOutOfStock(product)) {
+      return 'close-circle-outline';
+    } else if (this.isLowStock(product)) {
+      return 'alert-circle-outline';
+    }
+    return 'checkmark-circle-outline';
+  }
+  
+  getStockIconColor(product: Product): string {
+    if (this.isOutOfStock(product)) {
+      return 'danger';
+    } else if (this.isLowStock(product)) {
+      return 'warning';
+    }
+    return 'success';
+  }
 
   private convertToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -293,12 +381,17 @@ export class AdminInventoryPage implements OnInit {
     });
   }
 
-  private async showToast(message: string) {
+  private async showToast(message: string, color: string = 'success') {
+    // Use 'success' for success messages, 'danger' for errors, 'warning' for warnings
+    if (message.includes('Error')) {
+      color = 'danger';
+    }
+    
     const toast = await this.toastController.create({
       message: message,
-      duration: 3000, // Increased duration for better readability
+      duration: 3000,
       position: 'bottom',
-      color: message.includes('Error') ? 'danger' : 'success'
+      color: color
     });
     toast.present();
   }

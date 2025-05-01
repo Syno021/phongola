@@ -74,6 +74,12 @@
         </ion-item>
 
         <ion-item>
+          <ion-label position="floating">Low Stock Threshold</ion-label>
+          <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
+          <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
+        </ion-item>
+
+        <ion-item>
           <ion-label position="floating">Category</ion-label>
           <ion-select formControlName="category">
             <ion-select-option *ngFor="let category of productCategories" [value]="category">
@@ -117,8 +123,30 @@
   <div *ngIf="selectedSegment === 'list'">
     <ion-searchbar [(ngModel)]="searchTerm" (ionChange)="filterProducts()"></ion-searchbar>
     
+    <!-- Alert banner for low stock items -->
+    <ion-item *ngIf="getLowStockCount() > 0" color="warning" button (click)="filterLowStockOnly()">
+      <ion-icon name="alert-circle-outline" slot="start"></ion-icon>
+      <ion-label>
+        {{getLowStockCount()}} product(s) have low stock!
+        <p>Click to view low stock items only</p>
+      </ion-label>
+    </ion-item>
+    
+    <!-- Filter buttons -->
+    <ion-segment [(ngModel)]="stockFilterOption" (ionChange)="applyStockFilter()">
+      <ion-segment-button value="all">
+        <ion-label>All</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="low">
+        <ion-label>Low Stock</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="out">
+        <ion-label>Out of Stock</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    
     <ion-list>
-      <ion-item *ngFor="let product of filteredProducts">
+      <ion-item *ngFor="let product of filteredProducts" [color]="getStockStatusColor(product)">
         <ion-label>
           <h2>{{product.name}}</h2>
           <p>{{product.description}}</p>
@@ -130,7 +158,19 @@
             <p class="discounted-price">Discounted Price: R{{calculateDiscountedPrice(product) | number:'1.2-2'}}</p>
             <p class="promo-dates">Valid: {{getPromotion(product.promotion_id)?.start_date | date}} - {{getPromotion(product.promotion_id)?.end_date | date}}</p>
           </div>
-          <p>Stock: {{product.stock_quantity}}</p>
+          
+          <!-- Stock display with status indicator -->
+          <div class="stock-status">
+            <p>
+              <ion-icon [name]="getStockStatusIcon(product)" [color]="getStockIconColor(product)"></ion-icon>
+              Stock: {{product.stock_quantity}}
+              <ion-badge *ngIf="isLowStock(product)" color="warning">Low Stock</ion-badge>
+              <ion-badge *ngIf="isOutOfStock(product)" color="danger">Out of Stock</ion-badge>
+            </p>
+            <p *ngIf="product.low_stock_threshold" class="threshold-info">
+              <small>(Alert threshold: {{product.low_stock_threshold}})</small>
+            </p>
+          </div>
         </ion-label>
         <ion-button slot="end" (click)="editProduct(product)">Edit</ion-button>
         <ion-button slot="end" color="danger" (click)="deleteProduct(product)">Delete</ion-button>
@@ -171,6 +211,12 @@
           <ion-item>
             <ion-label position="floating">Stock Quantity</ion-label>
             <ion-input formControlName="stock_quantity" type="number" min="0"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Low Stock Threshold</ion-label>
+            <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
+            <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
           </ion-item>
 
           <ion-item>
