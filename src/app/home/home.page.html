@@ -82,9 +82,10 @@
       <h2 class="card-title">{{product.name}}</h2>
       <p class="card-body">{{product.description}}</p>
       
-      <!-- Show stock status information -->
-      <p class="stock-status" [ngClass]="{'in-stock': product.stock_quantity > 0, 'low-stock': product.stock_quantity > 0 && product.stock_quantity <= 5, 'out-of-stock': product.stock_quantity <= 0}">
-        <span *ngIf="product.stock_quantity > 0">In Stock: {{product.stock_quantity}}</span>
+      <!-- Update the stock status section in the product card -->
+      <p class="stock-status" [ngClass]="{'in-stock': product.stock_quantity > 10, 'low-stock': isLowStock(product.stock_quantity), 'out-of-stock': product.stock_quantity <= 0}">
+        <span *ngIf="product.stock_quantity > 10">In Stock</span>
+        <span *ngIf="isLowStock(product.stock_quantity)">Low Stock: {{product.stock_quantity}} left</span>
         <span *ngIf="product.stock_quantity <= 0">Out of Stock</span>
       </p>
       

@@ -1,4 +1,3 @@
-// HomePage Component - Updated implementation with stock validation
 import { Component, OnInit, Injector, NgZone, OnDestroy } from '@angular/core';
 import { Product, ProductCategory } from '../shared/models/product';
 import { Promotion } from '../shared/models/promotion';
@@ -29,6 +28,7 @@ export class HomePage implements OnInit, OnDestroy {
   // Temporary buffer for items being modified in the UI before adding to cart
   tempQuantities = new Map<string, number>();
   private cartSubscription: Subscription | null = null;
+  private authSubscription: Subscription | null = null;
   private allProducts: Product[] = [];
   searchTerm: string = '';
   selectedPriceRange: string = 'all';
@@ -47,21 +47,52 @@ export class HomePage implements OnInit, OnDestroy {
     private cartService: CartService
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
+    // Will be handled by ionViewWillEnter
+  }
+
+  // This method is called every time the page is navigated to
+  ionViewWillEnter() {
+    this.resetPageState();
+    this.loadPageData();
+  }
+
+  // Clear all previous data
+  private resetPageState() {
+    this.products = [];
+    this.promotions = [];
+    this.allProducts = [];
+    this.loading = true;
+    this.selectedCategory = null;
+    this.searchTerm = '';
+    this.selectedPriceRange = 'all';
+    this.selectedSize = [];
+    this.currentUser = null;
+    this.tempQuantities = new Map<string, number>();
+    
+    // Unsubscribe from previous subscriptions to prevent memory leaks
+    if (this.cartSubscription) {
+      this.cartSubscription.unsubscribe();
+      this.cartSubscription = null;
+    }
+    
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+      this.authSubscription = null;
+    }
+  }
+
+  private async loadPageData() {
     await this.loadProducts();
     await this.loadPromotions();
     
     // Check if user is already logged in
-    this.auth.authState.subscribe(async (user) => {
+    this.authSubscription = this.auth.authState.subscribe(async (user) => {
       if (!user) {
-        const modal = await this.modalCtrl.create({
-          component: LoginComponent,
-          backdropDismiss: false,
-          cssClass: 'login-modal'
-        });
-        
-        await modal.present();
-        const { data, role } = await modal.onDidDismiss();
+        // Use the static method from LoginComponent to show the modal
+        await LoginComponent.presentLoginModal(this.modalCtrl);
+        // Reset user data
+        this.currentUser = null;
       } else {
         try {
           const userData = await this.ngZone.run(() =>
@@ -92,6 +123,10 @@ export class HomePage implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.cartSubscription) {
       this.cartSubscription.unsubscribe();
+    }
+    
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
     }
   }
 
@@ -213,17 +248,9 @@ export class HomePage implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  // Updated to use the static method for showing the login modal
   async openModal() {
-    const modal = await this.modalCtrl.create({
-      component: LoginComponent,
-      backdropDismiss: false,
-      cssClass: 'login-modal'
-    });
-    
-    await modal.present();
-    
-    const { data, role } = await modal.onDidDismiss();
-    console.log('Modal dismissed with data:', data, 'and role:', role);
+    await LoginComponent.presentLoginModal(this.modalCtrl);
   }
 
   searchProducts(event: any) {
@@ -256,7 +283,7 @@ export class HomePage implements OnInit, OnDestroy {
       });
     }
 
-    // Apply size filter
+    // Apply size filter if needed
     // if (this.selectedSize.length > 0) {
     //   filteredProducts = filteredProducts.filter(p => 
     //     this.selectedSize.some(size => p.size === size)
@@ -278,6 +305,7 @@ export class HomePage implements OnInit, OnDestroy {
   async logout() {
     try {
       await this.auth.signOut();
+      this.cartService.clearCart(); // Clear cart on logout
       this.router.navigate(['/']);
     } catch (error) {
       this.presentToast('Error logging out');
@@ -286,5 +314,14 @@ export class HomePage implements OnInit, OnDestroy {
 
   navigateToProfile() {
     this.router.navigate(['/profile']);
+  }
+
+  isLowStock(stockQuantity: number): boolean {
+    return stockQuantity > 0 && stockQuantity < 11;
+  }
+
+  // This method is called when the page is about to be left
+  ionViewWillLeave() {
+    // You can perform additional cleanup here if needed
   }
 }
