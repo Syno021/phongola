@@ -5,19 +5,19 @@
     </ion-buttons>
     <ion-title>Inventory Management</ion-title>
     <ion-buttons slot="end">
-      <ion-button routerLink="/stats">
+      <ion-button routerLink="/stats" title="Statistics">
         <ion-icon name="stats-chart-outline"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/pos">
+      <ion-button routerLink="/pos" title="Point of Sale">
         <ion-icon name="cart-outline"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/admin-promotions">
+      <ion-button routerLink="/admin-promotions" title="Promotions">
         <ion-icon name="pricetags-outline"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/order-management">
+      <ion-button routerLink="/order-management" title="Order Management">
         <ion-icon name="document-text-outline"></ion-icon>
       </ion-button>
-      <ion-button (click)="logout()">
+      <ion-button (click)="logout()" title="Logout">
         <ion-icon name="log-out-outline"></ion-icon>
       </ion-button>
     </ion-buttons>

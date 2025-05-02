@@ -10,11 +10,11 @@
       <ion-button class="cart-button" *ngIf="currentUser">
         {{ currentUser }}
       </ion-button>
-      <ion-button (click)="navigateToCart()" class="cart-button">
+      <ion-button (click)="navigateToCart()" class="cart-button" title="cart">
         <ion-icon name="cart-outline"></ion-icon>
         <ion-badge *ngIf="cartItemCount > 0" color="danger" class="animate-fade-in">{{cartItemCount}}</ion-badge>
       </ion-button>
-      <ion-button (click)="navigateToProfile()" class="cart-button">
+      <ion-button (click)="navigateToProfile()" class="cart-button" title="Profile">
         <ion-icon name="person-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
