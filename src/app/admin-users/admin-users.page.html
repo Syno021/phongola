@@ -1,0 +1,89 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>User Management</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/admin-inventory" title="Inventory">
+        <ion-icon name="bag-outline"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()" title="Logout">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="loadUsers(); $event.target.complete()">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+  
+  <div class="ion-padding">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Users</ion-card-title>
+        <ion-card-subtitle>Manage system users and permissions</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <ion-searchbar [(ngModel)]="searchTerm" (ionChange)="filterUsers()" placeholder="Search by name, email or username" animated></ion-searchbar>
+        
+        <div class="filter-section">
+          <ion-chip *ngFor="let role of roleFilters" 
+                   [color]="role.active ? getRoleColor(role.value) : 'medium'"
+                   (click)="toggleRoleFilter(role)">
+            <ion-label>{{role.value}}</ion-label>
+            <ion-icon *ngIf="role.active" name="checkmark-circle"></ion-icon>
+          </ion-chip>
+          
+          <ion-chip *ngIf="hasActiveFilters()" (click)="clearFilters()" color="light">
+            <ion-icon name="close-circle"></ion-icon>
+            <ion-label>Clear filters</ion-label>
+          </ion-chip>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-list *ngIf="!isLoading">
+      <ion-item-sliding *ngFor="let user of filteredUsers">
+        <ion-item button (click)="openUserModal(user)" detail="true">
+          <ion-avatar slot="start">
+            <ion-icon name="person-circle" size="large"></ion-icon>
+          </ion-avatar>
+          <ion-label>
+            <h2>{{user.first_name}} {{user.last_name}}</h2>
+            <p>{{user.email}}</p>
+            <p>{{user.username}}</p>
+          </ion-label>
+          <ion-chip [color]="getRoleColor(user.role)" slot="end">
+            {{user.role}}
+          </ion-chip>
+        </ion-item>
+        
+        <ion-item-options side="end">
+          <ion-item-option color="danger" (click)="deleteUser(user, $event)">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-item-option>
+        </ion-item-options>
+      </ion-item-sliding>
+    </ion-list>
+
+    <div *ngIf="isLoading" class="ion-text-center ion-padding">
+      <ion-spinner name="circular"></ion-spinner>
+      <p>Loading users...</p>
+    </div>
+
+    <div *ngIf="!isLoading && filteredUsers.length === 0" class="ion-text-center ion-padding">
+      <ion-icon name="people" size="large"></ion-icon>
+      <p>No users found</p>
+    </div>
+  </div>
+
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openUserModal()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

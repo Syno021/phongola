@@ -48,9 +48,9 @@
             </div>
             
             <!-- Product Image -->
-            <div class="product-image">
+            <!-- <div class="product-image">
               <img [src]="product.image_url" [alt]="product.name"/>
-            </div>
+            </div> -->
             
             <!-- Product Info -->
             <div class="product-info">
@@ -63,6 +63,20 @@
                 <span class="current-price">
                   R{{getPromotion(product.promotion_id) ? calculateDiscountedPrice(product).toFixed(2) : product.price.toFixed(2)}}
                 </span>
+              </div>
+
+              <!-- New Stock Status Indicators -->
+              <div class="stock-status">
+                <div *ngIf="!isOutOfStock(product)" class="stock-indicator" 
+                     [ngClass]="{'in-stock': product.stock_quantity >= 10, 
+                                'low-stock': product.stock_quantity < 10}">
+                  <ion-icon [name]="product.stock_quantity >= 10 ? 'checkmark-circle' : 'warning'"></ion-icon>
+                  <span>{{getStockDisplay(product)}}</span>
+                </div>
+                <div *ngIf="isOutOfStock(product)" class="stock-indicator out-of-stock">
+                  <ion-icon name="close-circle"></ion-icon>
+                  <span>Out of Stock</span>
+                </div>
               </div>
               
               <!-- Quantity Controls -->
@@ -103,9 +117,9 @@
           <!-- Cart items display -->
           <div *ngIf="!isLoading && cartItems.length > 0" class="cart-item-list">
             <div *ngFor="let item of cartItems" class="cart-item">
-              <div class="item-image">
+              <!-- <div class="item-image">
                 <img [src]="item.image_url" [alt]="item.name">
-              </div>
+              </div> -->
               <div class="item-details">
                 <div class="item-name">{{item.name}}</div>
                 <div class="item-price">R{{item.price.toFixed(2)}}</div>

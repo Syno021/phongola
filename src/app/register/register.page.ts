@@ -41,19 +41,19 @@ export class RegisterPage implements OnInit {
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
     if (password.length < minLength) {
-      return { isValid: false, message: 'Password must be at least 8 characters long' };
+      return { isValid: false, message: 'Your password needs to be at least 8 characters long' };
     }
     if (!hasUpperCase) {
-      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+      return { isValid: false, message: 'Please include at least one capital letter in your password' };
     }
     if (!hasLowerCase) {
-      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+      return { isValid: false, message: 'Please include at least one lowercase letter in your password' };
     }
     if (!hasNumbers) {
-      return { isValid: false, message: 'Password must contain at least one number' };
+      return { isValid: false, message: 'Please include at least one number in your password' };
     }
     if (!hasSpecialChar) {
-      return { isValid: false, message: 'Password must contain at least one special character' };
+      return { isValid: false, message: 'Please include at least one special character (like !@#$%) in your password' };
     }
 
     return { isValid: true, message: '' };
@@ -106,8 +106,8 @@ export class RegisterPage implements OnInit {
 
           // Show success message
           const successToast = await this.toastController.create({
-            message: 'Registration successful!',
-            duration: 2000,
+            message: 'Welcome! Your account has been created successfully.',
+            duration: 3000,
             color: 'success'
           });
           await successToast.present();
@@ -118,10 +118,20 @@ export class RegisterPage implements OnInit {
         });
       });
     } catch (error: any) {
-      // Show error message
+      let errorMessage = 'Something went wrong while creating your account. Please try again.';
+      
+      // Customize error messages for common scenarios
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please try logging in instead.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      }
+
       const errorToast = await this.toastController.create({
-        message: error.message || 'Registration failed',
-        duration: 2000,
+        message: errorMessage,
+        duration: 3000,
         color: 'danger'
       });
       await errorToast.present();

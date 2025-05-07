@@ -5,7 +5,7 @@
 export const environment = {
   production: false,
   firebaseConfig : {
-    apiKey: "AIzaSyA2MDInaBaLSCQiBMOHCJU81XFAYxReRlY",
+    apiKey: "AIzaSyA2MDInaBaLSCQiBMOHCJU81XFAYxReRl",
     authDomain: "phongola-aa195.firebaseapp.com",
     projectId: "phongola-aa195",
     storageBucket: "phongola-aa195.firebasestorage.app",
@@ -14,7 +14,7 @@ export const environment = {
     measurementId: "G-F0QJWL3JHG"
   },
 
-  paystackTestPublicKey: 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe43'
+  paystackTestPublicKey: 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe'
 };
 
 /*

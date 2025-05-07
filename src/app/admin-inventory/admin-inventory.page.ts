@@ -99,11 +99,11 @@ export class AdminInventoryPage implements OnInit {
       // Check if any products have low stock and notify
       const lowStockCount = this.getLowStockCount();
       if (lowStockCount > 0) {
-        this.showToast(`Warning: ${lowStockCount} product(s) have low stock!`, 'warning');
+        this.showToast(`Attention: ${lowStockCount} items are running low on stock`, 'warning');
       }
     } catch (error) {
       console.error('Error loading products:', error);
-      this.showToast('Error loading products');
+      this.showToast('Unable to load products. Please try again');
     }
   }
 
@@ -117,7 +117,7 @@ export class AdminInventoryPage implements OnInit {
       this.promotions = snapshot?.docs.map(doc => doc.data() as Promotion) || [];
     } catch (error) {
       console.error('Error loading promotions:', error);
-      this.showToast('Error loading promotions');
+      this.showToast('Unable to load promotions. Please try again');
     }
   }
 
@@ -169,7 +169,7 @@ export class AdminInventoryPage implements OnInit {
           control.markAsTouched();
         }
       });
-      this.showToast('Please fill all required fields correctly');
+      this.showToast('Please complete all required fields before submitting');
       return;
     }
 
@@ -211,14 +211,14 @@ export class AdminInventoryPage implements OnInit {
         )
       );
 
-      this.showToast('Product added successfully');
+      this.showToast('New product has been added successfully');
       this.productForm.reset({
         low_stock_threshold: this.defaultLowStockThreshold // Reset with default value
       });
       this.selectedFile = null;
     } catch (error) {
       console.error(error);
-      this.showToast('Error adding product');
+      this.showToast('Unable to add product. Please try again');
     } finally {
       this.isSubmitting = false;
     }
@@ -232,9 +232,9 @@ export class AdminInventoryPage implements OnInit {
         this.productForm.patchValue({
           image_url: base64
         });
-        this.showToast('Image added successfully');
+        this.showToast('Product image uploaded successfully');
       } catch (error) {
-        this.showToast('Error processing image');
+        this.showToast('Unable to process image. Please try a different image');
         console.error(error);
       }
     }
@@ -293,11 +293,11 @@ export class AdminInventoryPage implements OnInit {
       }
       this.filterProducts();
 
-      this.showToast('Product updated successfully');
+      this.showToast('Product details have been updated successfully');
       this.cancelEdit();
     } catch (error) {
       console.error('Error updating product:', error);
-      this.showToast('Error updating product');
+      this.showToast('Unable to update product. Please try again');
     } finally {
       this.isSubmitting = false;
     }
@@ -312,10 +312,10 @@ export class AdminInventoryPage implements OnInit {
       );
       this.products = this.products.filter(p => p.product_id !== product.product_id);
       this.filterProducts();
-      this.showToast('Product deleted successfully');
+      this.showToast('Product has been removed from inventory');
     } catch (error) {
       console.error('Error deleting product:', error);
-      this.showToast('Error deleting product');
+      this.showToast('Unable to delete product. Please try again');
     }
   }
 
@@ -401,7 +401,7 @@ export class AdminInventoryPage implements OnInit {
       await this.auth.signOut();
       this.router.navigate(['/']);
     } catch (error) {
-      this.showToast('Error logging out');
+      this.showToast('Unable to sign out. Please try again');
     }
   }
 }

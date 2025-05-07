@@ -1,0 +1,79 @@
+ion-card {
+    margin-bottom: 16px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  ion-item {
+    --padding-start: 16px;
+    --inner-padding-end: 16px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+    
+    h2 {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    p {
+      margin-top: 2px;
+      font-size: 0.9em;
+      color: var(--ion-color-medium);
+    }
+  }
+  
+  ion-avatar {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--ion-color-light);
+    
+    ion-icon {
+      font-size: 32px;
+      color: var(--ion-color-medium);
+    }
+  }
+  
+  ion-chip {
+    font-weight: 500;
+  }
+  
+  .no-users-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    
+    ion-icon {
+      font-size: 48px;
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      font-size: 1.2em;
+    }
+  }
+  
+  ion-spinner {
+    width: 48px;
+    height: 48px;
+    margin: 16px auto;
+  }
+  
+  ion-searchbar {
+    --border-radius: 8px;
+    --box-shadow: none;
+    --background: var(--ion-color-light);
+    padding: 0;
+  }
+  
+  /* Make swipeable list items more obvious */
+  ion-item-sliding {
+    margin-bottom: 2px;
+    border-radius: 8px;
+    overflow: hidden;
+  }

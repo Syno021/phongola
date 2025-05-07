@@ -124,14 +124,14 @@
             <ion-list>
               <ion-item *ngFor="let item of order.items | slice:0:2" lines="none" class="order-item">
                 <ion-thumbnail slot="start">
-                  <img src="assets/placeholder.png" alt="Product Image">
+                  <img [src]="item.image_url || 'assets/placeholder.png'" alt="Product Image">
                 </ion-thumbnail>
                 <ion-label>
                   <h4>{{ item.name }}</h4>
                   <p>Qty: {{ item.quantity }}</p>
                 </ion-label>
                 <div slot="end" class="item-price">
-                  {{ item.price * item.quantity | currency }}
+                  R{{ item.price * item.quantity  }}
                 </div>
               </ion-item>
               
@@ -145,12 +145,8 @@
             <div class="order-footer">
               <div class="total">
                 <span>Total:</span>
-                <span class="total-amount">{{ order.amount  }}</span>
+                <span class="total-amount">R{{ order.amount  }}</span>
               </div>
-              <ion-button fill="clear" size="small">
-                View Details
-                <ion-icon name="chevron-forward-outline" slot="end"></ion-icon>
-              </ion-button>
             </div>
           </ion-card-content>
         </ion-card>

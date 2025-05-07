@@ -21,9 +21,10 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { LoginComponent } from './login/login.component';
 import { OrderDetailsModalComponent } from './order-details-modal/order-details-modal.component';
+import { UserModalComponent } from './user-modal/user-modal.component';
 
 @NgModule({
-  declarations: [AppComponent, LoginComponent, OrderDetailsModalComponent ],
+  declarations: [AppComponent, LoginComponent, OrderDetailsModalComponent, UserModalComponent ],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
     AngularFireModule.initializeApp(environment.firebaseConfig),
     AngularFireAuthModule,

@@ -8,6 +8,7 @@ import { runInInjectionContext } from '@angular/core';
 import { LoginComponent } from '../login/login.component';
 import { Subscription } from 'rxjs';
 import { User, UserRole } from '../shared/models/user';
+import firebase from 'firebase/compat/app';
 
 interface CustomerAddress {
   address_id: string;
@@ -27,6 +28,7 @@ interface OrderItem {
   price: number;
   product_id: string;
   quantity: number;
+  image_url: any;
 }
 
 interface Order {
@@ -60,6 +62,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   userSubscription!: Subscription;
   ordersSubscription!: Subscription;
   addressesSubscription!: Subscription;
+  authStateSubscription!: Subscription;
 
   constructor(
     private modalCtrl: ModalController,
@@ -93,14 +96,17 @@ export class ProfilePage implements OnInit, OnDestroy {
     if (this.addressesSubscription) {
       this.addressesSubscription.unsubscribe();
     }
+    if (this.authStateSubscription) {
+      this.authStateSubscription.unsubscribe();
+    }
   }
 
   checkAuthStatus() {
-    this.userSubscription = this.auth.authState.subscribe(user => {
+    this.authStateSubscription = this.auth.authState.subscribe(firebaseUser => {
       this.isLoading = false;
-      if (user) {
-        this.loadUserProfile(user.uid);
-        this.loadUserOrders(user.uid);
+      if (firebaseUser) {
+        this.loadOrCreateUserProfile(firebaseUser);
+        this.loadUserOrders(firebaseUser.uid);
       } else {
         this.user = null;
         this.orders = [];
@@ -108,61 +114,138 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
   }
 
-  loadUserProfile(userId: string) {
+  loadOrCreateUserProfile(firebaseUser: firebase.User) {
     runInInjectionContext(this.injector, () => {
-      this.firestore.collection('users').doc(userId).get().subscribe((doc) => {
+      // Check if user exists in the users collection
+      this.userSubscription = this.firestore.collection('users').doc(firebaseUser.uid).get().subscribe(async (doc) => {
         if (doc.exists) {
+          // User already exists in collection
           const userData = doc.data() as User;
-          this.user = userData;
+          
+          // Ensure user_id is set correctly
+          this.user = {
+            ...userData,
+            user_id: firebaseUser.uid // Explicitly set user_id from Firebase Auth
+          };
+          
+          console.log('Loaded existing user:', this.user);
+          
           this.profileForm.patchValue({
-            first_name: userData.first_name || '',
-            last_name: userData.last_name || '',
-            email: userData.email || '',
-            username: userData.username || '',
-            role: userData.role || UserRole.CUSTOMER
+            first_name: this.user.first_name || '',
+            last_name: this.user.last_name || '',
+            email: this.user.email || '',
+            username: this.user.username || '',
+            role: this.user.role || UserRole.CUSTOMER
           });
-          this.loadCustomerAddresses(userId);
+        } else {
+          // User doesn't exist in collection (likely Google sign-in)
+          // Create new user with data from Google profile
+          const newUser: User = {
+            user_id: firebaseUser.uid, // Set the user_id correctly
+            email: firebaseUser.email || '',
+            first_name: this.extractFirstName(firebaseUser.displayName),
+            last_name: this.extractLastName(firebaseUser.displayName),
+            username: this.generateUsername(firebaseUser.displayName || firebaseUser.email || ''),
+            role: UserRole.CUSTOMER,
+            created_at: new Date(),
+            updated_at: new Date(),
+            password_hash: '' // Set an empty string or a default value for password_hash
+          };
+          
+          // Save the new user to Firestore
+          try {
+            runInInjectionContext(this.injector, async () => {
+              await this.firestore.collection('users').doc(firebaseUser.uid).set(newUser);
+            });
+            this.presentToast('Welcome! Your profile has been created');
+            this.user = newUser;
+            console.log('Created new user:', this.user);
+            
+            this.profileForm.patchValue({
+              first_name: newUser.first_name || '',
+              last_name: newUser.last_name || '',
+              email: newUser.email || '',
+              username: newUser.username || '',
+              role: newUser.role || UserRole.CUSTOMER
+            });
+          } catch (error) {
+            console.error('Error creating user profile:', error);
+            this.presentToast('Unable to create your profile. Please try again');
+          }
         }
+        
+        // Load addresses for the user
+        this.loadCustomerAddresses(firebaseUser.uid);
       });
     });
   }
 
+  // Helper methods to extract name components from displayName
+  extractFirstName(displayName: string | null): string {
+    if (!displayName) return '';
+    return displayName.split(' ')[0] || '';
+  }
+
+  extractLastName(displayName: string | null): string {
+    if (!displayName) return '';
+    const nameParts = displayName.split(' ');
+    return nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+  }
+
+  // Generate a username from displayName or email
+  generateUsername(input: string): string {
+    // Remove spaces and special characters
+    let username = input.split('@')[0]; // Use part before @ if it's an email
+    username = username.replace(/[^\w]/g, '').toLowerCase();
+    
+    // Add a random number to make it more unique
+    const randomNum = Math.floor(Math.random() * 1000);
+    return `${username}${randomNum}`;
+  }
+
   loadCustomerAddresses(userId: string) {
-    this.addressesSubscription = this.firestore
-      .collection('customer_addresses', ref => 
-        ref.where('user_id', '==', userId)
-      )
-      .snapshotChanges()
-      .subscribe(actions => {
-        this.addresses = actions.map(action => {
-          const data = action.payload.doc.data() as CustomerAddress;
-          const address_id = action.payload.doc.id;
-          return { ...data, address_id };
+    runInInjectionContext(this.injector, () => {
+      this.addressesSubscription = this.firestore
+        .collection('customer_addresses', ref => 
+          ref.where('user_id', '==', userId)
+        )
+        .snapshotChanges()
+        .subscribe(actions => {
+          this.addresses = actions.map(action => {
+            const data = action.payload.doc.data() as CustomerAddress;
+            const address_id = action.payload.doc.id;
+            return { ...data, address_id };
+          });
         });
-      });
+    });
   }
 
   loadUserOrders(userId: string) {
     runInInjectionContext(this.injector, () => {
-      try {
-        this.ordersSubscription = this.firestore.collection('orders', ref => 
-          ref.where('user_id', '==', userId).orderBy('created_at', 'desc')
-        ).snapshotChanges().subscribe(actions => {
-          this.orders = actions.map(action => {
-            const data = action.payload.doc.data() as Omit<Order, 'id'>;
-            const id = action.payload.doc.id;
-            return { id, ...data } as Order;
-          });
-          console.log('Loaded orders:', this.orders);
-        }, error => {
-          console.error('Error loading orders:', error);
-          // Try a simpler query as fallback
-          this.loadOrdersWithoutSorting(userId);
+      // Simple query that only filters by user_id without ordering
+      this.ordersSubscription = this.firestore.collection('orders', ref => 
+        ref.where('user_id', '==', userId)
+      ).snapshotChanges().subscribe(actions => {
+        this.orders = actions.map(action => {
+          const data = action.payload.doc.data() as Omit<Order, 'id'>;
+          const id = action.payload.doc.id;
+          return { id, ...data } as Order;
         });
-      } catch (error) {
-        console.error('Exception loading orders:', error);
-        this.loadOrdersWithoutSorting(userId);
-      }
+        
+        // Sort the orders client-side after retrieving them
+        this.orders.sort((a, b) => {
+          // Handle different timestamp formats safely
+          const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+          const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
+          return dateB.getTime() - dateA.getTime(); // descending order (newest first)
+        });
+        
+        console.log('Loaded user orders:', this.orders);
+      }, error => {
+        console.error('Error loading orders:', error);
+        this.orders = [];
+        this.presentToast('Unable to load your orders. Please refresh the page');
+      });
     });
   }
   
@@ -192,20 +275,69 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   async updateProfile() {
-    if (!this.user || !this.profileForm.valid) return;
+    if (!this.profileForm.valid) {
+      this.presentToast('Please fill in all required fields before saving');
+      return;
+    }
+    
+    // Get current auth user to ensure we have the correct ID
+    const currentUser = await this.auth.currentUser;
+    if (!currentUser) {
+      this.presentToast('Please sign in to update your profile');
+      return;
+    }
+    
+    const userId = currentUser.uid;
+    
+    if (!this.user) {
+      console.warn('Local user object is null, creating new user object');
+      this.user = {
+        user_id: userId,
+        email: this.profileForm.value.email,
+        first_name: this.profileForm.value.first_name,
+        last_name: this.profileForm.value.last_name,
+        username: this.profileForm.value.username,
+        role: this.profileForm.value.role || UserRole.CUSTOMER,
+        created_at: new Date(),
+        updated_at: new Date(),
+        password_hash: ''
+      };
+    }
     
     try {
+      console.log('Updating user with ID:', userId);
+      
+      // Create an updated user object with all required fields
+      const updatedUser: Partial<User> = {
+        first_name: this.profileForm.value.first_name,
+        last_name: this.profileForm.value.last_name,
+        email: this.profileForm.value.email,
+        username: this.profileForm.value.username,
+        role: this.profileForm.value.role || UserRole.CUSTOMER,
+        updated_at: new Date()     // Update the timestamp
+      };
+      
+      console.log('Updating user with data:', updatedUser);
+      
+      // Use set with merge instead of update to ensure it works
+      // even if the document doesn't exist yet
       runInInjectionContext(this.injector, async () => {
-        await this.firestore.collection('users').doc(this.user!.user_id).set(
-          this.profileForm.value, 
+        await this.firestore.collection('users').doc(userId).set(
+          updatedUser, 
           { merge: true }
         );
       });
       
-      this.presentToast('Profile updated successfully');
+      // Update local user object to reflect changes
+      this.user = { 
+        ...this.user,
+        ...updatedUser
+      };
+      
+      this.presentToast('Your profile has been updated successfully');
     } catch (error) {
-      this.presentToast('Error updating profile');
-      console.error(error);
+      console.error('Error updating profile:', error);
+      this.presentToast('Unable to update your profile. Please try again');
     }
   }
 
@@ -219,10 +351,11 @@ export class ProfilePage implements OnInit, OnDestroy {
   async logout() {
     try {
       await this.auth.signOut();
-      this.presentToast('Logged out successfully');
+      this.presentToast('You have been successfully signed out');
       this.router.navigate(['/home']);
     } catch (error) {
       console.error('Error signing out:', error);
+      this.presentToast('Unable to sign out. Please try again');
     }
   }
 

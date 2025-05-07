@@ -142,6 +142,7 @@ export class StatsPage implements OnInit {
       );
     } catch (error) {
       console.error('Error loading data:', error);
+      this.showToast('Unable to load statistics. Please try again later.');
     }
   }
 
@@ -570,7 +571,8 @@ export class StatsPage implements OnInit {
       message: message,
       duration: 3000,
       position: 'bottom',
-      color: message.includes('Error') ? 'danger' : 'success'
+      color: message.toLowerCase().includes('unable') ? 'danger' : 'success',
+      cssClass: 'toast-message'
     });
     toast.present();
   }
@@ -580,7 +582,7 @@ export class StatsPage implements OnInit {
       await this.auth.signOut();
       this.router.navigate(['/']);
     } catch (error) {
-      this.showToast('Error logging out');
+      this.showToast('Unable to sign out. Please try again.');
     }
   }
 }

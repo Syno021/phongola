@@ -166,7 +166,7 @@ export class CartPage implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error loading saved addresses:', error);
-      await this.presentToast('Failed to load your saved addresses.');
+      await this.presentToast('Unable to load your delivery addresses. Please try refreshing the page.');
     }
   }
 
@@ -375,7 +375,7 @@ export class CartPage implements OnInit, OnDestroy {
 
   removeItem(item: CartItem) {
     this.cartService.removeFromCart(item.product_id);
-    this.presentToast(`${item.name} removed from cart`);
+    this.presentToast(`"${item.name}" has been removed from your cart`);
   }
 
   async clearCart() {
@@ -392,7 +392,7 @@ export class CartPage implements OnInit, OnDestroy {
           role: 'destructive',
           handler: () => {
             this.cartService.clearCart();
-            this.presentToast('Cart cleared');
+            this.presentToast('Your cart has been cleared');
           }
         }
       ]
@@ -411,21 +411,21 @@ export class CartPage implements OnInit, OnDestroy {
 
   proceedToCheckout() {
     if (this.cartItems.length === 0) {
-      this.presentToast('Your cart is empty');
+      this.presentToast('Please add items to your cart before checking out');
       return;
     }
     
     // Check if delivery method and address are valid if delivery is selected
     if (this.deliveryMethod === 'delivery') {
       if (!this.isValidDeliverySelection()) {
-        this.presentToast('Please select or add a valid delivery address');
+        this.presentToast('Please provide a delivery address to continue');
         return;
       }
       
       // If using new address form, validate it
       if (this.showNewAddressForm && !this.addressForm.valid) {
         this.markFormGroupTouched(this.addressForm);
-        this.presentToast('Please fill in all required address fields');
+        this.presentToast('Please complete all required address fields');
         return;
       }
       
@@ -628,7 +628,7 @@ export class CartPage implements OnInit, OnDestroy {
       
     } catch (error) {
       console.error('Error saving new address:', error);
-      await this.presentToast('Failed to save your address. Please try again.');
+      await this.presentToast('We couldn\'t save your address. Please check your information and try again.');
       throw error; // Rethrow to handle in the calling function
     }
   }
@@ -645,7 +645,7 @@ export class CartPage implements OnInit, OnDestroy {
         {
           text: 'Login',
           handler: () => {
-            this.router.navigate(['/login'], { 
+            this.router.navigate(['/home'], { 
               queryParams: { returnUrl: '/cart' } 
             });
           }
@@ -786,10 +786,10 @@ async deleteAddress(addressId: string) {
               this.selectedAddressId = this.savedAddresses.length > 0 ? this.savedAddresses[0].address_id : null;
             }
             
-            await this.presentToast('Address deleted successfully');
+            await this.presentToast('Your delivery address has been removed');
           } catch (error) {
             console.error('Error deleting address:', error);
-            await this.presentToast('Failed to delete address. Please try again.');
+            await this.presentToast('We couldn\'t delete this address. Please try again.');
           }
         }
       }
@@ -902,14 +902,14 @@ isEditingAddress(): boolean {
 // Submit the address form (for add or edit)
 async submitAddressForm() {
   if (!this.userId) {
-    this.presentToast('User not logged in. Please log in to save addresses.');
+    this.presentToast('Please sign in to save your delivery address');
     await this.openLoginComponent();
     return;
   }
 
   if (!this.addressForm.valid) {
     this.markFormGroupTouched(this.addressForm);
-    this.presentToast('Please fill in all required address fields');
+    this.presentToast('Please fill in all required address fields to continue');
     return;
   }
 
@@ -962,11 +962,11 @@ async submitAddressForm() {
       this.addressForm.reset();
       this.showNewAddressForm = false;
       
-      await this.presentToast('Address saved successfully');
+      await this.presentToast('Your delivery address has been saved');
     }
   } catch (error) {
     console.error('Error saving address:', error);
-    await this.presentToast('Failed to save address. Please try again.');
+    await this.presentToast('We couldn\'t save your address. Please check your information and try again.');
   }
 }
 
@@ -983,7 +983,7 @@ private async openLoginComponent() {
         text: 'Login',
         handler: () => {
           // Navigate to login with return URL
-          this.router.navigate(['/login'], {
+          this.router.navigate(['/home'], {
             queryParams: {
               returnUrl: '/cart',
               action: 'payment'

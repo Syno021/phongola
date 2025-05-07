@@ -1,50 +1,67 @@
 .login-container {
   max-width: 400px;
   width: 90%;
-  margin: 2rem auto;
-  padding: 1.5rem;
+  margin: 1rem auto;
+  padding: 1.25rem 1.25rem 0.75rem;
   position: relative;
   background-color: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 95vh; /* Prevent modal from exceeding viewport height */
+  overflow-y: auto; /* Add scrolling if needed */
 }
 
 @media (max-width: 480px) {
   .login-container {
     width: 95%;
-    padding: 1rem;
-    margin: 1rem auto;
+    padding: 1.25rem 1rem 0.5rem;
+    margin: 0.75rem auto;
   }
 }
 
 .login-container h2 {
   text-align: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+  padding-top: 0.25rem;
 }
 
 .login-form ion-item {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   --padding-start: 0;
   --inner-padding-end: 0;
+  --border-color: #ddd;
+  --highlight-color-focused: var(--ion-color-primary);
+  font-size: 0.95rem;
 }
 
 .login-form ion-button {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  height: 38px;
+}
+
+.login-buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .close-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  --padding-start: 8px;
-  --padding-end: 8px;
-  height: 36px;
+  top: 8px;
+  right: 8px;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  height: 32px;
+  margin: 0;
 }
 
 /* Fix input width */
 ion-input {
   width: 100%;
+  --padding-start: 8px;
+  font-size: 0.95rem;
 }
 
 /* Make sure buttons don't overflow */
@@ -52,4 +69,18 @@ ion-button[expand="block"] {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.25rem;
+}
+
+.footer-links ion-button {
+  margin: 0;
+  height: 32px;
+  font-size: 0.85rem;
+  --padding-top: 0;
+  --padding-bottom: 0;
 }

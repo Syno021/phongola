@@ -1,0 +1,98 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>{{ isEditMode ? 'Edit User' : 'Add New User' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismissModal()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="userForm" (ngSubmit)="saveUser()">
+    <ion-list>
+      <ion-item>
+        <ion-label position="floating">Username</ion-label>
+        <ion-input formControlName="username" type="text"></ion-input>
+      </ion-item>
+      <ion-note color="danger" *ngIf="userForm.controls['username'].touched && userForm.controls['username'].invalid">
+        Username is required
+      </ion-note>
+
+      <ion-item>
+        <ion-label position="floating">Email</ion-label>
+        <ion-input formControlName="email" type="email"></ion-input>
+      </ion-item>
+      <ion-note color="danger" *ngIf="userForm.controls['email'].touched && userForm.controls['email'].invalid">
+        Please enter a valid email
+      </ion-note>
+
+      <ion-item>
+        <ion-label position="floating">First Name</ion-label>
+        <ion-input formControlName="first_name" type="text"></ion-input>
+      </ion-item>
+      <ion-note color="danger" *ngIf="userForm.controls['first_name'].touched && userForm.controls['first_name'].invalid">
+        First name is required
+      </ion-note>
+
+      <ion-item>
+        <ion-label position="floating">Last Name</ion-label>
+        <ion-input formControlName="last_name" type="text"></ion-input>
+      </ion-item>
+      <ion-note color="danger" *ngIf="userForm.controls['last_name'].touched && userForm.controls['last_name'].invalid">
+        Last name is required
+      </ion-note>
+
+      <ion-item>
+        <ion-label>Role</ion-label>
+        <ion-select formControlName="role" interface="action-sheet" placeholder="Select role">
+          <ion-select-option *ngFor="let role of userRoles" [value]="role">
+            {{role}} - {{getRoleDescription(role)}}
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+    </ion-list>
+
+    <div *ngIf="isEditMode" class="user-info ion-margin-top">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-subtitle>User Information</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-list lines="none">
+            <ion-item>
+              <ion-label>
+                <p>User ID</p>
+                <h3 class="ion-text-wrap">{{user?.user_id}}</h3>
+              </ion-label>
+            </ion-item>
+            <ion-item>
+              <ion-label>
+                <p>Created at</p>
+                <h3>{{user?.created_at | date:'medium'}}</h3>
+              </ion-label>
+            </ion-item>
+            <ion-item>
+              <ion-label>
+                <p>Last updated</p>
+                <h3>{{user?.updated_at | date:'medium'}}</h3>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-buttons slot="end">
+      <ion-button color="medium" (click)="dismissModal()">Cancel</ion-button>
+      <ion-button  (click)="saveUser()" [disabled]="userForm.invalid">
+        {{ isEditMode ? 'Update' : 'Create' }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>

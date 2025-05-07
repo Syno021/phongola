@@ -22,8 +22,8 @@
 </ion-header>
 
 <ion-toolbar class="category-toolbar">
-  <ion-segment scrollable>
-    <ion-segment-button *ngFor="let category of categories" (click)="selectCategory(category)">
+  <ion-segment scrollable="true" value="{{selectedCategory || categories[0]}}" class="scrollable-segment">
+    <ion-segment-button *ngFor="let category of categories" [value]="category" (click)="selectCategory(category)">
       <ion-label>{{category | titlecase}}</ion-label>
     </ion-segment-button>
   </ion-segment>
@@ -40,15 +40,6 @@
         <ion-select-option value="51-100">R51 - R100</ion-select-option>
         <ion-select-option value="101-200">R101 - R200</ion-select-option>
         <ion-select-option value="201+">R201+</ion-select-option>
-      </ion-select>
-    </ion-item>
-    <ion-item class="filter-item">
-      <ion-label>Size</ion-label>
-      <ion-select [(ngModel)]="selectedSize" (ionChange)="applyFilters()" multiple="true">
-        <ion-select-option value="1L">1L</ion-select-option>
-        <ion-select-option value="2L">2L</ion-select-option>
-        <ion-select-option value="5L">5L</ion-select-option>
-        <ion-select-option value="25L">25L</ion-select-option>
       </ion-select>
     </ion-item>
   </div>

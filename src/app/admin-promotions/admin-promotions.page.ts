@@ -62,13 +62,13 @@ export class AdminPromotionsPage implements OnInit {
       this.promotions = snapshot?.docs.map(doc => doc.data() as Promotion) || [];
     } catch (error) {
       console.error('Error loading promotions:', error);
-      this.showToast('Error loading promotions');
+      this.showToast('Unable to load promotions. Please try again.');
     }
   }
 
   async onSubmit() {
     if (this.promotionForm.invalid) {
-      this.showToast('Please fill all required fields correctly');
+      this.showToast('Please fill in all the required fields with valid values');
       return;
     }
 
@@ -111,12 +111,12 @@ export class AdminPromotionsPage implements OnInit {
         )
       );
 
-      this.showToast('Promotion added successfully');
+      this.showToast('Your promotion has been successfully added');
       this.promotionForm.reset();
       this.loadPromotions();
     } catch (error) {
       console.error(error);
-      this.showToast('Error adding promotion');
+      this.showToast('Unable to add promotion. Please try again.');
     } finally {
       this.isSubmitting = false;
     }
@@ -163,12 +163,12 @@ export class AdminPromotionsPage implements OnInit {
         )
       );
 
-      this.showToast('Promotion updated successfully');
+      this.showToast('Your promotion has been successfully updated');
       this.cancelEdit();
       this.loadPromotions();
     } catch (error) {
       console.error('Error updating promotion:', error);
-      this.showToast('Error updating promotion');
+      this.showToast('Unable to update promotion. Please try again.');
     } finally {
       this.isSubmitting = false;
     }
@@ -183,11 +183,11 @@ export class AdminPromotionsPage implements OnInit {
             .delete()
         )
       );
-      this.showToast('Promotion deleted successfully');
+      this.showToast('Your promotion has been successfully deleted');
       this.loadPromotions();
     } catch (error) {
       console.error('Error deleting promotion:', error);
-      this.showToast('Error deleting promotion');
+      this.showToast('Unable to delete promotion. Please try again.');
     }
   }
 
@@ -206,7 +206,7 @@ export class AdminPromotionsPage implements OnInit {
       await this.auth.signOut();
       this.router.navigate(['/']);
     } catch (error) {
-      this.showToast('Error logging out');
+      this.showToast('Unable to log out. Please try again.');
     }
   }
 }

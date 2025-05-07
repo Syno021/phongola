@@ -77,7 +77,8 @@ export class LoginComponent implements OnInit, OnDestroy {
         });
       });
     } catch (error) {
-      this.showToast('Login failed: ' + (error as any).message);
+      const errorMessage = this.getReadableErrorMessage((error as any).message);
+      this.showToast(errorMessage);
     }
   }
 
@@ -95,8 +96,24 @@ export class LoginComponent implements OnInit, OnDestroy {
         });
       });
     } catch (error) {
-      this.showToast('Google login failed: ' + (error as any).message);
+      this.showToast('Unable to sign in with Google. Please try again.');
     }
+  }
+
+  private getReadableErrorMessage(errorMessage: string): string {
+    if (errorMessage.includes('wrong-password') || errorMessage.includes('user-not-found')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (errorMessage.includes('invalid-email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (errorMessage.includes('too-many-requests')) {
+      return 'Too many failed attempts. Please try again later.';
+    }
+    if (errorMessage.includes('network-request-failed')) {
+      return 'Network error. Please check your internet connection.';
+    }
+    return 'Unable to sign in. Please try again.';
   }
 
   private async checkUserRoleAndNavigate(userId: string) {
@@ -116,8 +133,7 @@ export class LoginComponent implements OnInit, OnDestroy {
             }
           }
         } catch (error) {
-          console.error('Error during navigation:', error);
-          this.showToast('Navigation error: ' + (error as any).message);
+          this.showToast('Unable to access your account. Please try again.');
         }
       });
     });
@@ -151,5 +167,11 @@ export class LoginComponent implements OnInit, OnDestroy {
     LoginComponent.isModalOpen = false;
     await this.modalCtrl.dismiss();
     this.router.navigate(['/register']);
+  }
+
+  async goToForgotPassword() {
+    LoginComponent.isModalOpen = false;
+    await this.modalCtrl.dismiss();
+    this.router.navigate(['/forgot-password']);
   }
 }

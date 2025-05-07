@@ -174,18 +174,16 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   increaseQuantity(product: Product) {
-    // Only allow increasing quantity if product is in stock and not exceeding available stock
     if (product.stock_quantity <= 0) {
-      this.presentToast('This product is out of stock');
+      this.presentToast('Sorry, this item is currently out of stock');
       return;
     }
     
     const currentQty = this.tempQuantities.get(product.product_id) || 0;
-    // Make sure we don't add more than what's in stock
     if (currentQty < product.stock_quantity) {
       this.tempQuantities.set(product.product_id, currentQty + 1);
     } else {
-      this.presentToast(`Only ${product.stock_quantity} units available in stock`);
+      this.presentToast(`Sorry, we only have ${product.stock_quantity} items left in stock`);
     }
   }
 
@@ -201,27 +199,24 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async addToCart(product: Product) {
-    // Check if product is in stock
     if (product.stock_quantity <= 0) {
-      this.presentToast('Sorry, this product is out of stock');
+      this.presentToast('Sorry, this item is currently out of stock');
       return;
     }
     
     const quantity = this.getQuantity(product);
     if (quantity > 0) {
-      // Make sure the quantity doesn't exceed available stock
       const validQuantity = Math.min(quantity, product.stock_quantity);
       
       if (validQuantity !== quantity) {
-        this.presentToast(`Only ${product.stock_quantity} units available. Adding ${validQuantity} to cart.`);
+        this.presentToast(`Limited stock available. Adding ${validQuantity} items to your cart`);
       }
       
       this.cartService.addToCart(product, validQuantity);
-      this.tempQuantities.set(product.product_id, 0); // Reset quantity after adding to cart
+      this.tempQuantities.set(product.product_id, 0);
       
-      // Display a toast notification
       const toast = await this.toastController.create({
-        message: `${validQuantity} ${product.name} added to cart`,
+        message: `Added ${validQuantity} ${product.name}${validQuantity > 1 ? 's' : ''} to your cart`,
         duration: 2000,
         position: 'bottom'
       });
@@ -305,10 +300,10 @@ export class HomePage implements OnInit, OnDestroy {
   async logout() {
     try {
       await this.auth.signOut();
-      this.cartService.clearCart(); // Clear cart on logout
+      this.cartService.clearCart();
       this.router.navigate(['/']);
     } catch (error) {
-      this.presentToast('Error logging out');
+      this.presentToast('Unable to log out. Please try again');
     }
   }
 

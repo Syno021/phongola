@@ -655,3 +655,53 @@ ion-item.filter-item {
 ion-searchbar.search-bar {
   --box-shadow: none;
 }
+
+.category-toolbar {
+  --background: var(--ion-color-light);
+}
+
+.scrollable-segment {
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* For Firefox */
+}
+
+.scrollable-segment::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
+}
+
+/* For Custom Div Implementation */
+.scrollable-categories {
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 10px 0;
+  background: var(--ion-color-light);
+  scrollbar-width: none;
+}
+
+.scrollable-categories::-webkit-scrollbar {
+  display: none;
+}
+
+.category-container {
+  display: inline-flex;
+  padding: 0 8px;
+}
+
+.category-item {
+  padding: 10px 16px;
+  margin: 0 4px;
+  border-radius: 20px;
+  background: var(--ion-color-light-shade);
+  color: var(--ion-color-dark);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-item.active {
+  background: var(--ion-color-primary);
+  color: var(--ion-color-light);
+}

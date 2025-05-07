@@ -25,6 +25,8 @@ interface CartItem {
   quantity: number;
 }
 
+
+
 @Component({
   selector: 'app-pos',
   templateUrl: './pos.page.html',
@@ -254,7 +256,7 @@ export class PosPage implements OnInit {
   
     removeItem(item: CartItem) {
       this.cartService.removeFromCart(item.product_id);
-      this.presentToast(`${item.name} removed from cart`);
+      this.presentToast(`${item.name} has been removed from your cart`);
     }
   
     async clearCart() {
@@ -453,7 +455,16 @@ export class PosPage implements OnInit {
 
   increaseQuantity(product: Product) {
     const currentQty = this.tempQuantities.get(product.product_id) || 0;
-    this.tempQuantities.set(product.product_id, currentQty + 1);
+    const cartQty = this.cartService.getQuantity(product.product_id);
+    const totalRequested = currentQty + 1;
+    
+    // Make sure we're not trying to add more than what's available
+    if (product.stock_quantity > 0 && totalRequested + cartQty <= product.stock_quantity) {
+      this.tempQuantities.set(product.product_id, totalRequested);
+    } else if (product.stock_quantity > 0) {
+      // Notify user that they can't add more
+      this.presentToast(`You can only add ${product.stock_quantity - cartQty} more ${product.name}${(product.stock_quantity - cartQty) > 1 ? 's' : ''} to your cart`);
+    }
   }
 
   decreaseQuantity(product: Product) {
@@ -469,13 +480,26 @@ export class PosPage implements OnInit {
 
   async addToCart(product: Product) {
     const quantity = this.getQuantity(product);
+    
+    // Check if there's enough stock
     if (quantity > 0) {
+      if (quantity > product.stock_quantity) {
+        const toast = await this.toastController.create({
+          message: `Sorry, we only have ${product.stock_quantity} units of ${product.name} available`,
+          duration: 2000,
+          position: 'bottom',
+          color: 'danger'
+        });
+        toast.present();
+        return;
+      }
+      
       this.cartService.addToCart(product, quantity);
       this.tempQuantities.set(product.product_id, 0); // Reset quantity after adding to cart
       
       // Display a toast notification
       const toast = await this.toastController.create({
-        message: `${quantity} ${product.name} added to cart`,
+        message: `Added ${quantity} ${product.name}${quantity > 1 ? 's' : ''} to your cart`,
         duration: 2000,
         position: 'bottom'
       });
@@ -592,7 +616,30 @@ export class PosPage implements OnInit {
   }
 
   increaseCartQuantity(item: CartItem) {
-    this.cartService.addToCart({ product_id: item.product_id } as Product, 1);
+    // Find the product to check stock
+    const product = this.allProducts.find(p => p.product_id === item.product_id);
+    
+    if (product && item.quantity < product.stock_quantity) {
+      this.cartService.addToCart({ ...product } as Product, 1);
+    } else {
+      this.presentToast(`Sorry, we don't have any more ${item.name} in stock`);
+    }
+  }
+
+  getStockDisplay(product: Product): string {
+    if (!product.stock_quantity || product.stock_quantity <= 0) {
+      return 'Out of Stock';
+    }
+    
+    if (product.stock_quantity < 10) {
+      return `${product.stock_quantity} left`;
+    }
+    
+    return 'In Stock';
+  }
+  
+  isOutOfStock(product: Product): boolean {
+    return !product.stock_quantity || product.stock_quantity <= 0;
   }
 
   readonly Date = Date; // Make Date available to template
