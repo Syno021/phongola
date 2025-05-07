@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { AdminAuthGuard } from './shared/services/AdminAuthGuard';
 
 const routes: Routes = [
   {
@@ -17,11 +18,13 @@ const routes: Routes = [
   },
   {
     path: 'admin-inventory',
-    loadChildren: () => import('./admin-inventory/admin-inventory.module').then(m => m.AdminInventoryPageModule)
+    loadChildren: () => import('./admin-inventory/admin-inventory.module').then(m => m.AdminInventoryPageModule),
+    canActivate: [AdminAuthGuard]
   },
   {
     path: 'admin-promotions',
-    loadChildren: () => import('./admin-promotions/admin-promotions.module').then(m => m.AdminPromotionsPageModule)
+    loadChildren: () => import('./admin-promotions/admin-promotions.module').then(m => m.AdminPromotionsPageModule),
+    canActivate: [AdminAuthGuard]
   },
   {
     path: 'cart',
@@ -29,14 +32,18 @@ const routes: Routes = [
   },
   {
     path: 'pos',
-    loadChildren: () => import('./pos/pos.module').then( m => m.PosPageModule)
+    loadChildren: () => import('./pos/pos.module').then( m => m.PosPageModule),
+    canActivate: [AdminAuthGuard]
   },
   {
     path: 'stats',
-    loadChildren: () => import('./stats/stats.module').then( m => m.StatsPageModule)
-  },  {
+    loadChildren: () => import('./stats/stats.module').then( m => m.StatsPageModule),
+    canActivate: [AdminAuthGuard]
+  },
+  {
     path: 'order-management',
-    loadChildren: () => import('./order-management/order-management.module').then( m => m.OrderManagementPageModule)
+    loadChildren: () => import('./order-management/order-management.module').then( m => m.OrderManagementPageModule),
+    canActivate: [AdminAuthGuard]
   },
   {
     path: 'profile',
@@ -48,7 +55,8 @@ const routes: Routes = [
   },
   {
     path: 'admin-users',
-    loadChildren: () => import('./admin-users/admin-users.module').then( m => m.AdminUsersPageModule)
+    loadChildren: () => import('./admin-users/admin-users.module').then( m => m.AdminUsersPageModule),
+    canActivate: [AdminAuthGuard]
   }
 
 

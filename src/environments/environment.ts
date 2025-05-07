@@ -5,7 +5,7 @@
 export const environment = {
   production: false,
   firebaseConfig : {
-    apiKey: "AIzaSyA2MDInaBaLSCQiBMOHCJU81XFAYxReRl",
+    apiKey: "AIzaSyA2MDInaBaLSCQiBMOHCJU81XFAYxReRlY",
     authDomain: "phongola-aa195.firebaseapp.com",
     projectId: "phongola-aa195",
     storageBucket: "phongola-aa195.firebasestorage.app",
