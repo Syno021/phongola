@@ -22,7 +22,10 @@
 </ion-header>
 
 <ion-toolbar class="category-toolbar">
-  <ion-segment scrollable="true" value="{{selectedCategory || categories[0]}}" class="scrollable-segment">
+  <ion-segment scrollable="true" value="{{selectedCategory || 'all'}}" class="scrollable-segment">
+    <ion-segment-button value="all" (click)="selectCategory(null)">
+      <ion-label>All</ion-label>
+    </ion-segment-button>
     <ion-segment-button *ngFor="let category of categories" [value]="category" (click)="selectCategory(category)">
       <ion-label>{{category | titlecase}}</ion-label>
     </ion-segment-button>
@@ -53,59 +56,54 @@
   
   <div class="container">
     <ion-spinner *ngIf="loading" class="luxury-spinner"></ion-spinner>
-    
-    <div *ngIf="!selectedCategory" class="select-category-message">
-      <h2>Please select a category to view products</h2>
-    </div>
 
-    <!-- Update the product card section to show out of stock status -->
-<div class="products-container" *ngIf="selectedCategory">
-  <div class="card" *ngFor="let product of products">
-    <div class="card-image">
-      <img [src]="product.image_url" [alt]="product.name"/>
-      <!-- Add out of stock overlay when stock is zero -->
-      <div class="out-of-stock-overlay" *ngIf="product.stock_quantity <= 0">
-        <span>OUT OF STOCK</span>
+    <div class="products-container">
+      <div class="card" *ngFor="let product of products">
+        <div class="card-image">
+          <img [src]="product.image_url" [alt]="product.name"/>
+          <!-- Add out of stock overlay when stock is zero -->
+          <div class="out-of-stock-overlay" *ngIf="product.stock_quantity <= 0">
+            <span>OUT OF STOCK</span>
+          </div>
+        </div>
+        <div class="card-text">
+          <p class="card-meal-type">{{product.category}}</p>
+          <h2 class="card-title">{{product.name}}</h2>
+          <p class="card-body">{{product.description}}</p>
+          
+          <!-- Update the stock status section in the product card -->
+          <p class="stock-status" [ngClass]="{'in-stock': product.stock_quantity > 10, 'low-stock': isLowStock(product.stock_quantity), 'out-of-stock': product.stock_quantity <= 0}">
+            <span *ngIf="product.stock_quantity > 10">In Stock</span>
+            <span *ngIf="isLowStock(product.stock_quantity)">Low Stock: {{product.stock_quantity}} left</span>
+            <span *ngIf="product.stock_quantity <= 0">Out of Stock</span>
+          </p>
+          
+          <div class="quantity-controls" *ngIf="product.stock_quantity > 0">
+            <ion-button fill="clear" (click)="decreaseQuantity(product)">
+              <ion-icon name="remove-circle-outline"></ion-icon>
+            </ion-button>
+            <span>{{getQuantity(product)}}</span>
+            <ion-button fill="clear" (click)="increaseQuantity(product)">
+              <ion-icon name="add-circle-outline"></ion-icon>
+            </ion-button>
+          </div>
+          
+          <!-- Disable add to cart button when out of stock or quantity is zero -->
+          <ion-button expand="block" (click)="addToCart(product)" 
+                      [disabled]="getQuantity(product) === 0 || product.stock_quantity <= 0"
+                      [class.out-of-stock-button]="product.stock_quantity <= 0">
+            {{ product.stock_quantity <= 0 ? 'Out of Stock' : 'Add to Cart' }}
+          </ion-button>
+        </div>
+        <div class="card-price" *ngIf="!getPromotion(product.promotion_id)">
+          R{{product.price.toFixed(2)}}
+        </div>
+        <div class="card-price promotion" *ngIf="getPromotion(product.promotion_id)">
+          <span class="original-price">R{{product.price.toFixed(2)}}</span>
+          <span class="discounted-price">R{{calculateDiscountedPrice(product).toFixed(2)}}</span>
+          <span class="discount">{{getPromotion(product.promotion_id)?.discount_percentage}}% OFF</span>
+        </div>
       </div>
     </div>
-    <div class="card-text">
-      <p class="card-meal-type">{{product.category}}</p>
-      <h2 class="card-title">{{product.name}}</h2>
-      <p class="card-body">{{product.description}}</p>
-      
-      <!-- Update the stock status section in the product card -->
-      <p class="stock-status" [ngClass]="{'in-stock': product.stock_quantity > 10, 'low-stock': isLowStock(product.stock_quantity), 'out-of-stock': product.stock_quantity <= 0}">
-        <span *ngIf="product.stock_quantity > 10">In Stock</span>
-        <span *ngIf="isLowStock(product.stock_quantity)">Low Stock: {{product.stock_quantity}} left</span>
-        <span *ngIf="product.stock_quantity <= 0">Out of Stock</span>
-      </p>
-      
-      <div class="quantity-controls" *ngIf="product.stock_quantity > 0">
-        <ion-button fill="clear" (click)="decreaseQuantity(product)">
-          <ion-icon name="remove-circle-outline"></ion-icon>
-        </ion-button>
-        <span>{{getQuantity(product)}}</span>
-        <ion-button fill="clear" (click)="increaseQuantity(product)">
-          <ion-icon name="add-circle-outline"></ion-icon>
-        </ion-button>
-      </div>
-      
-      <!-- Disable add to cart button when out of stock or quantity is zero -->
-      <ion-button expand="block" (click)="addToCart(product)" 
-                  [disabled]="getQuantity(product) === 0 || product.stock_quantity <= 0"
-                  [class.out-of-stock-button]="product.stock_quantity <= 0">
-        {{ product.stock_quantity <= 0 ? 'Out of Stock' : 'Add to Cart' }}
-      </ion-button>
-    </div>
-    <div class="card-price" *ngIf="!getPromotion(product.promotion_id)">
-      R{{product.price.toFixed(2)}}
-    </div>
-    <div class="card-price promotion" *ngIf="getPromotion(product.promotion_id)">
-      <span class="original-price">R{{product.price.toFixed(2)}}</span>
-      <span class="discounted-price">R{{calculateDiscountedPrice(product).toFixed(2)}}</span>
-      <span class="discount">{{getPromotion(product.promotion_id)?.discount_percentage}}% OFF</span>
-    </div>
-  </div>
-</div>
   </div>
 </ion-content>

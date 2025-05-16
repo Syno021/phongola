@@ -8,14 +8,17 @@
       <ion-button routerLink="/stats" title="Statistics">
         <ion-icon name="stats-chart-outline"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/pos" title="Point of Sale">
-        <ion-icon name="cart-outline"></ion-icon>
+      <ion-button routerLink="/track-stock" title="Stock History">
+        <ion-icon name="time-outline"></ion-icon>
       </ion-button>
       <ion-button routerLink="/admin-promotions" title="Promotions">
         <ion-icon name="pricetags-outline"></ion-icon>
       </ion-button>
       <ion-button routerLink="/order-management" title="Order Management">
         <ion-icon name="document-text-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/pos" title="Point of Sale">
+        <ion-icon name="cart-outline"></ion-icon>
       </ion-button>
       <ion-button routerLink="/admin-users" title="Users">
         <ion-icon name="person-outline"></ion-icon>
@@ -77,10 +80,16 @@
         </ion-item>
 
         <ion-item>
-          <ion-label position="floating">Low Stock Threshold</ion-label>
-          <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
-          <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
-        </ion-item>
+            <ion-label position="floating">Low Stock Threshold</ion-label>
+            <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
+            <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
+            <ion-button slot="end" size="small" (click)="setEditThresholdToHalfStock()" fill="outline">Set to 50% of stock</ion-button>
+          </ion-item>
+          
+          <ion-item>
+            <ion-checkbox [(ngModel)]="autoEditThreshold" [ngModelOptions]="{standalone: true}"></ion-checkbox>
+            <ion-label>Automatically set threshold to 50% of stock quantity</ion-label>
+          </ion-item>
 
         <ion-item>
           <ion-label position="floating">Category</ion-label>
@@ -159,8 +168,9 @@
             <p class="promo-desc">{{getPromotion(product.promotion_id)?.description}}</p>
             <p>Discount: {{getPromotion(product.promotion_id)?.discount_percentage}}% off</p>
             <p class="discounted-price">Discounted Price: R{{calculateDiscountedPrice(product) | number:'1.2-2'}}</p>
-            <p class="promo-dates">Valid: {{getPromotion(product.promotion_id)?.start_date | date}} - {{getPromotion(product.promotion_id)?.end_date | date}}</p>
+            <p class="promo-dates">Valid: {{toJsDate(getPromotion(product.promotion_id)?.start_date) | date}} - {{toJsDate(getPromotion(product.promotion_id)?.end_date) | date}}</p>
           </div>
+          <p>Date of creation: {{toJsDate(product.created_at) | date:'medium'}}</p>
           
           <!-- Stock display with status indicator -->
           <div class="stock-status">

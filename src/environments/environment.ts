@@ -14,7 +14,7 @@ export const environment = {
     measurementId: "G-F0QJWL3JHG"
   },
 
-  paystackTestPublicKey: 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe'
+  paystackTestPublicKey: 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe43'
 };
 
 /*

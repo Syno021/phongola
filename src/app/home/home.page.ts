@@ -238,7 +238,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.router.navigate(['/cart']);
   }
 
-  selectCategory(category: ProductCategory) {
+  selectCategory(category: ProductCategory | null) {
     this.selectedCategory = category;
     this.applyFilters();
   }
@@ -254,11 +254,14 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   applyFilters() {
-    // Start with all products if no category selected, otherwise filter by category
-    let filteredProducts = this.selectedCategory 
-      ? this.allProducts.filter(p => p.category === this.selectedCategory)
-      : [...this.allProducts];
+    // Start with all products regardless of category
+    let filteredProducts = [...this.allProducts];
 
+    // Apply category filter if one is selected
+    if (this.selectedCategory) {
+      filteredProducts = filteredProducts.filter(p => p.category === this.selectedCategory);
+    }
+    
     // Apply search term filter
     if (this.searchTerm) {
       filteredProducts = filteredProducts.filter(p => 

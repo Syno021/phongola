@@ -30,6 +30,12 @@ export class AdminInventoryPage implements OnInit {
   editingProduct: Product | null = null;
   promotions: Promotion[] = [];
   
+  // Auto threshold flag for new products
+  autoThreshold = false;
+  
+  // Auto threshold flag for edit form
+  autoEditThreshold = false;
+  
   // Default low stock threshold (used when product doesn't specify its own)
   defaultLowStockThreshold = 5;
   
@@ -75,6 +81,28 @@ export class AdminInventoryPage implements OnInit {
     this.productCategories = Object.values(ProductCategory);
     this.loadProducts();
     this.loadPromotions();
+    
+    // Add listener for stock quantity changes in product form to update threshold
+    this.productForm.get('stock_quantity')?.valueChanges.subscribe(stockQuantity => {
+      // Only update if the "auto threshold" checkbox is checked
+      if (this.autoThreshold && stockQuantity && !isNaN(stockQuantity)) {
+        const halfStock = Math.ceil(stockQuantity * 0.5);
+        this.productForm.patchValue({
+          low_stock_threshold: halfStock > 0 ? halfStock : 1
+        }, { emitEvent: false });
+      }
+    });
+    
+    // Add listener for stock quantity changes in edit form to update threshold
+    this.editForm.get('stock_quantity')?.valueChanges.subscribe(stockQuantity => {
+      // Only update if the "auto threshold" checkbox is checked
+      if (this.autoEditThreshold && stockQuantity && !isNaN(stockQuantity)) {
+        const halfStock = Math.ceil(stockQuantity * 0.5);
+        this.editForm.patchValue({
+          low_stock_threshold: halfStock > 0 ? halfStock : 1
+        }, { emitEvent: false });
+      }
+    });
   }
 
   async loadProducts() {
@@ -149,6 +177,14 @@ export class AdminInventoryPage implements OnInit {
         break;
     }
   }
+
+  // In your component.ts file
+toJsDate(dateValue: any): Date {
+  if (dateValue && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate(); // Convert Firestore Timestamp to JS Date
+  }
+  return dateValue; // Already a Date or null/undefined
+}
   
   filterLowStockOnly() {
     this.stockFilterOption = 'low';
@@ -171,6 +207,17 @@ export class AdminInventoryPage implements OnInit {
       });
       this.showToast('Please complete all required fields before submitting');
       return;
+    }
+
+    // If auto threshold is enabled, calculate and set 50% of stock as threshold
+    if (this.autoThreshold) {
+      const stockQuantity = this.productForm.get('stock_quantity')?.value;
+      if (stockQuantity && !isNaN(stockQuantity)) {
+        const halfStock = Math.ceil(stockQuantity * 0.5);
+        this.productForm.patchValue({
+          low_stock_threshold: halfStock > 0 ? halfStock : 1
+        });
+      }
     }
 
     this.isSubmitting = true;
@@ -215,6 +262,7 @@ export class AdminInventoryPage implements OnInit {
       this.productForm.reset({
         low_stock_threshold: this.defaultLowStockThreshold // Reset with default value
       });
+      this.autoThreshold = false; // Reset auto threshold flag
       this.selectedFile = null;
     } catch (error) {
       console.error(error);
@@ -242,6 +290,10 @@ export class AdminInventoryPage implements OnInit {
 
   editProduct(product: Product) {
     this.editingProduct = product;
+    
+    // Reset the auto threshold flag
+    this.autoEditThreshold = false;
+    
     this.editForm.patchValue({
       name: product.name,
       description: product.description,
@@ -252,16 +304,34 @@ export class AdminInventoryPage implements OnInit {
       promotion_id: product.promotion_id || null,
       low_stock_threshold: product.low_stock_threshold || this.defaultLowStockThreshold
     });
+    
+    // Check if low_stock_threshold is approximately 50% of stock_quantity
+    const approxHalf = Math.ceil(product.stock_quantity * 0.5);
+    if (product.low_stock_threshold === approxHalf) {
+      this.autoEditThreshold = true;
+    }
   }
 
   cancelEdit() {
     this.editingProduct = null;
     this.editForm.reset();
+    this.autoEditThreshold = false;
   }
 
   async saveEdit() {
     if (this.editForm.invalid || !this.editingProduct) {
       return;
+    }
+
+    // If auto edit threshold is enabled, calculate and set 50% of stock as threshold
+    if (this.autoEditThreshold) {
+      const stockQuantity = this.editForm.get('stock_quantity')?.value;
+      if (stockQuantity && !isNaN(stockQuantity)) {
+        const halfStock = Math.ceil(stockQuantity * 0.5);
+        this.editForm.patchValue({
+          low_stock_threshold: halfStock > 0 ? halfStock : 1
+        });
+      }
     }
 
     this.isSubmitting = true;
@@ -332,6 +402,7 @@ export class AdminInventoryPage implements OnInit {
   }
   
   // Stock status methods
+  // Stock status methods
   isLowStock(product: Product): boolean {
     const threshold = product.low_stock_threshold || this.defaultLowStockThreshold;
     return product.stock_quantity > 0 && product.stock_quantity <= threshold;
@@ -371,6 +442,32 @@ export class AdminInventoryPage implements OnInit {
     }
     return 'success';
   }
+  
+  // Set threshold to 50% of stock quantity for new product form
+  setThresholdToHalfStock() {
+    const stockQuantity = this.productForm.get('stock_quantity')?.value;
+    if (stockQuantity && !isNaN(stockQuantity)) {
+      const halfStock = Math.ceil(stockQuantity * 0.5);
+      this.productForm.patchValue({
+        low_stock_threshold: halfStock > 0 ? halfStock : 1
+      });
+    } else {
+      this.showToast('Please set a valid stock quantity first', 'warning');
+    }
+  }
+  
+  // Set threshold to 50% of stock quantity for edit form
+  setEditThresholdToHalfStock() {
+    const stockQuantity = this.editForm.get('stock_quantity')?.value;
+    if (stockQuantity && !isNaN(stockQuantity)) {
+      const halfStock = Math.ceil(stockQuantity * 0.5);
+      this.editForm.patchValue({
+        low_stock_threshold: halfStock > 0 ? halfStock : 1
+      });
+    } else {
+      this.showToast('Please set a valid stock quantity first', 'warning');
+    }
+  }
 
   private convertToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -395,6 +492,7 @@ export class AdminInventoryPage implements OnInit {
     });
     toast.present();
   }
+  
 
   async logout() {
     try {

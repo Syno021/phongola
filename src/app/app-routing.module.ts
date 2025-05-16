@@ -57,7 +57,11 @@ const routes: Routes = [
     path: 'admin-users',
     loadChildren: () => import('./admin-users/admin-users.module').then( m => m.AdminUsersPageModule),
     canActivate: [AdminAuthGuard]
+  },  {
+    path: 'track-stock',
+    loadChildren: () => import('./track-stock/track-stock.module').then( m => m.TrackStockPageModule)
   }
+
 
 
 ];

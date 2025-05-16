@@ -1,0 +1,108 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Stock History Tracker</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Loading indicator -->
+  <div *ngIf="loading" class="ion-text-center ion-padding">
+    <ion-spinner name="circular"></ion-spinner>
+    <p>Loading stock history...</p>
+  </div>
+
+  <!-- Error message -->
+  <ion-item *ngIf="error" color="danger">
+    <ion-icon name="alert-circle-outline" slot="start"></ion-icon>
+    <ion-label>
+      <h2>Error loading products</h2>
+      <p>Please check your connection and try again</p>
+    </ion-label>
+    <ion-button slot="end" fill="clear" (click)="loadProductsAndTransactions()">Retry</ion-button>
+  </ion-item>
+
+  <!-- Product List -->
+  <ion-list *ngIf="!loading && products.length > 0">
+    <ion-list-header>
+      <ion-label>Product Stock History</ion-label>
+    </ion-list-header>
+    
+    <!-- Individual Product Items -->
+    <ion-item-group *ngFor="let product of products; trackBy: trackById">
+      <!-- Product Header -->
+      <ion-item button detail="false" (click)="toggleProduct(product)">
+        <ion-label>
+          <h2>{{ product.name }}</h2>
+          <p>
+            Current Stock: 
+            <span [class]="getStockStatusClass(product.currentStock, product.lowStockThreshold)">
+              {{ product.currentStock }}
+            </span>
+          </p>
+        </ion-label>
+        <ion-badge slot="end" [color]="product.currentStock <= product.lowStockThreshold ? 'warning' : 'success'">
+          {{ product.category }}
+        </ion-badge>
+        <ion-icon slot="end" [name]="product.expanded ? 'chevron-up' : 'chevron-down'"></ion-icon>
+      </ion-item>
+      
+      <!-- Years section (shown when product is expanded) -->
+      <div *ngIf="product.expanded">
+        <ion-item-group *ngFor="let year of product.years">
+          <!-- Year Header -->
+          <ion-item button detail="false" (click)="toggleYear(product, year)" class="year-item">
+            <ion-label>
+              <h3>{{ year.year }}</h3>
+            </ion-label>
+            <ion-icon slot="end" [name]="year.expanded ? 'chevron-up' : 'chevron-down'"></ion-icon>
+          </ion-item>
+          
+          <!-- Months section (shown when year is expanded) -->
+          <div *ngIf="year.expanded">
+            <ion-item-group *ngFor="let month of year.months">
+              <!-- Month Header -->
+              <ion-item button detail="false" (click)="toggleMonth(month)" class="month-item">
+                <ion-label>
+                  <h3>{{ month.monthName }}</h3>
+                </ion-label>
+                <ion-icon slot="end" [name]="month.expanded ? 'chevron-up' : 'chevron-down'"></ion-icon>
+              </ion-item>
+              
+              <!-- Stock data for the month (shown when month is expanded) -->
+              <ion-item *ngIf="month.expanded" lines="none">
+                <div class="stock-history-container">
+                  <ion-list>
+                    <ion-item *ngFor="let entry of month.stockData">
+                      <ion-label>
+                        <h4>{{ entry.date | date:'dd MMM yyyy' }}</h4>
+                        <p>
+                          Stock: 
+                          <span [class]="getStockStatusClass(entry.quantity, product.lowStockThreshold)">
+                            {{ entry.quantity }}
+                          </span>
+                          <span *ngIf="entry.transaction" class="transaction-reference">
+                            <br>Ref: {{ entry.transaction }}
+                          </span>
+                        </p>
+                      </ion-label>
+                    </ion-item>
+                  </ion-list>
+                </div>
+              </ion-item>
+            </ion-item-group>
+          </div>
+        </ion-item-group>
+      </div>
+    </ion-item-group>
+  </ion-list>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && products.length === 0" class="ion-text-center ion-padding">
+    <ion-icon name="cube-outline" style="font-size: 64px; opacity: 0.5;"></ion-icon>
+    <h2>No Products Found</h2>
+    <p>There are no products in your inventory</p>
+  </div>
+</ion-content>
