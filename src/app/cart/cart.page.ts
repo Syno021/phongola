@@ -328,7 +328,11 @@ export class CartPage implements OnInit, OnDestroy {
         const batch = this.firestore.firestore.batch();
         
         for (const item of items) {
-          const productRef = this.firestore.doc(`products/${item.product_id}`).ref;
+          const productRef = await this.ngZone.run(() => {
+            return runInInjectionContext(this.injector, async () => {
+              return this.firestore.doc(`products/${item.product_id}`).ref;
+            });
+          });
           
           // Get current product data
           const productDoc = await productRef.get();
