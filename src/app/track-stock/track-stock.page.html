@@ -21,7 +21,7 @@
       <h2>Error loading products</h2>
       <p>Please check your connection and try again</p>
     </ion-label>
-    <ion-button slot="end" fill="clear" (click)="loadProductsAndTransactions()">Retry</ion-button>
+    <ion-button slot="end" fill="clear" (click)="loadProductsAndHistory()">Retry</ion-button>
   </ion-item>
 
   <!-- Product List -->
@@ -77,14 +77,19 @@
                   <ion-list>
                     <ion-item *ngFor="let entry of month.stockData">
                       <ion-label>
-                        <h4>{{ entry.date | date:'dd MMM yyyy' }}</h4>
+                        <h4>{{ entry.date | date:'dd MMM yyyy HH:mm' }}</h4>
                         <p>
-                          Stock: 
+                          Current Stock: 
                           <span [class]="getStockStatusClass(entry.quantity, product.lowStockThreshold)">
                             {{ entry.quantity }}
                           </span>
-                          <span *ngIf="entry.transaction" class="transaction-reference">
-                            <br>Ref: {{ entry.transaction }}
+                          <br>
+                          Previous Stock: {{ entry.previousStock }}
+                          <br>
+                          Added Stock: {{ entry.new_stock }}
+                          <br>
+                          <span class="updated-by">
+                            Updated by: {{ entry.updatedBy }}
                           </span>
                         </p>
                       </ion-label>
@@ -103,6 +108,6 @@
   <div *ngIf="!loading && products.length === 0" class="ion-text-center ion-padding">
     <ion-icon name="cube-outline" style="font-size: 64px; opacity: 0.5;"></ion-icon>
     <h2>No Products Found</h2>
-    <p>There are no products in your inventory</p>
+    <p>There are no products in your inventory history</p>
   </div>
 </ion-content>

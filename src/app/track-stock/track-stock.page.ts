@@ -10,7 +10,9 @@ import { runInInjectionContext } from '@angular/core';
 interface StockHistory {
   date: Date;
   quantity: number;
-  transaction?: string; // Optional reference to the transaction
+  previousStock: number;
+  new_stock: number;
+  updatedBy: string;
 }
 
 interface ProductWithHistory {
@@ -33,17 +35,24 @@ interface ProductWithHistory {
   }[];
 }
 
-interface InventoryTransaction {
-  payment_reference: string;
-  sale_id: string;
-  updated_at: any; // Firestore timestamp
-  updated_by: string;
-  updates: Array<{
-    new_quantity: number;
-    old_quantity: number;
-    product_id: string;
-    quantity_decreased: number;
+interface ProductHistoryData {
+  category: string;
+  created_at: any;
+  description: string;
+  image_url: string;
+  low_stock_threshold: number;
+  name: string;
+  price: number;
+  product_id: number;
+  stock_history: Array<{
+    current_stock: number;
+    date: any;
+    new_stock: number;
+    previous_stock: number;
+    updated_by: string;
   }>;
+  stock_quantity: number;
+  updated_at: any;
 }
 
 @Component({
@@ -56,7 +65,6 @@ export class TrackStockPage implements OnInit {
   products: ProductWithHistory[] = [];
   loading = true;
   error = false;
-  inventoryTransactions: InventoryTransaction[] = [];
 
   constructor(
     private auth: AngularFireAuth,
@@ -69,68 +77,29 @@ export class TrackStockPage implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.loadProductsAndTransactions();
+    this.loadProductsAndHistory();
   }
 
-  async loadProductsAndTransactions() {
+  async loadProductsAndHistory() {
     try {
       this.loading = true;
       
-      // Load products
+      // Load products from product_history collection
       const productsSnapshot = await this.ngZone.run(() =>
         runInInjectionContext(this.injector, () =>
-          this.firestore.collection('products').get().toPromise()
+          this.firestore.collection('products_history').get().toPromise()
         )
       );
       
-      // Load inventory transactions
-      const transactionsSnapshot = await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, () =>
-          this.firestore.collection('inventory_Transaction', ref => 
-            ref.orderBy('updated_at', 'asc')).get().toPromise()
-        )
-      );
-      
-      if (productsSnapshot && transactionsSnapshot) {
-        // Process transactions first
-        this.inventoryTransactions = transactionsSnapshot.docs.map(doc => {
-          const data = doc.data() as any;
-          return {
-            id: doc.id,
-            payment_reference: data.payment_reference,
-            sale_id: data.sale_id,
-            updated_at: data.updated_at,
-            updated_by: data.updated_by,
-            updates: data.updates || []
-          };
+      if (productsSnapshot) {
+        this.products = productsSnapshot.docs.map(doc => {
+          const data = doc.data() as ProductHistoryData;
+          
+          // Process the product with its stock history
+          const productWithHistory = this.processProductHistory(doc.id, data);
+          
+          return productWithHistory;
         });
-        
-        // Now process products with actual transaction history
-        if (productsSnapshot) {
-          this.products = productsSnapshot.docs.map(doc => {
-            const data = doc.data() as any;
-            
-            // Create date from creation timestamp
-            const createdDate = data.created_at ? 
-              (typeof data.created_at === 'string' ? 
-                new Date(data.created_at) : 
-                data.created_at.toDate()) : 
-              new Date();
-            
-            // Process actual history data from transactions
-            const productWithHistory = this.processProductHistory(
-              doc.id,
-              data.name,
-              data.stock_quantity,
-              data.category,
-              data.price,
-              data.low_stock_threshold,
-              createdDate
-            );
-            
-            return productWithHistory;
-          });
-        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -141,53 +110,43 @@ export class TrackStockPage implements OnInit {
     }
   }
 
-  private processProductHistory(
-    id: string, 
-    name: string, 
-    currentStock: number, 
-    category: string,
-    price: number,
-    lowStockThreshold: number,
-    createdDate: Date
-  ): ProductWithHistory {
-    // Get all transactions related to this product
-    const productTransactions: Array<{date: Date, oldQuantity: number, newQuantity: number, reference: string}> = [];
+  private processProductHistory(id: string, data: ProductHistoryData): ProductWithHistory {
+    // Process stock history from the product document
+    const stockHistoryEntries: StockHistory[] = [];
     
-    // Collect all transaction updates for this product
-    this.inventoryTransactions.forEach(transaction => {
-      const updates = transaction.updates.filter(update => update.product_id === id);
-      
-      if (updates.length > 0) {
-        const transactionDate = transaction.updated_at instanceof Date ? 
-          transaction.updated_at : 
-          transaction.updated_at.toDate();
+    if (data.stock_history && data.stock_history.length > 0) {
+      data.stock_history.forEach(entry => {
+        const entryDate = entry.date instanceof Date ? 
+          entry.date : 
+          entry.date.toDate();
           
-        updates.forEach(update => {
-          productTransactions.push({
-            date: transactionDate,
-            oldQuantity: update.old_quantity,
-            newQuantity: update.new_quantity,
-            reference: transaction.payment_reference
-          });
+        stockHistoryEntries.push({
+          date: entryDate,
+          quantity: entry.current_stock,
+          previousStock: entry.previous_stock,
+          new_stock: entry.new_stock,
+          updatedBy: entry.updated_by
         });
-      }
-    });
-    
-    // Add initial stock point if needed
-    if (productTransactions.length === 0 || 
-        productTransactions[0].date > createdDate) {
-      productTransactions.unshift({
+      });
+    } else {
+      // If no stock history, create initial entry from creation date
+      const createdDate = data.created_at instanceof Date ? 
+        data.created_at : 
+        data.created_at.toDate();
+        
+      stockHistoryEntries.push({
         date: createdDate,
-        oldQuantity: currentStock,
-        newQuantity: currentStock,
-        reference: 'Initial Stock'
+        quantity: data.stock_quantity,
+        previousStock: 0,
+        new_stock: data.stock_quantity,
+        updatedBy: 'System'
       });
     }
     
-    // Sort transactions by date
-    productTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+    // Sort entries by date
+    stockHistoryEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    // Now organize transactions by year and month
+    // Organize entries by year and month
     const years: {
       year: number;
       expanded: boolean;
@@ -199,41 +158,40 @@ export class TrackStockPage implements OnInit {
       }[];
     }[] = [];
     
-    // Group transactions by year and month
-    const transactionsByYearMonth = new Map<string, StockHistory[]>();
+    // Group stock history by year and month
+    const entriesByYearMonth = new Map<string, StockHistory[]>();
     
-    productTransactions.forEach(transaction => {
-      const year = transaction.date.getFullYear();
-      const month = transaction.date.getMonth();
+    stockHistoryEntries.forEach(entry => {
+      const year = entry.date.getFullYear();
+      const month = entry.date.getMonth();
       const key = `${year}-${month}`;
       
-      if (!transactionsByYearMonth.has(key)) {
-        transactionsByYearMonth.set(key, []);
+      if (!entriesByYearMonth.has(key)) {
+        entriesByYearMonth.set(key, []);
       }
       
-      transactionsByYearMonth.get(key)?.push({
-        date: transaction.date,
-        quantity: transaction.newQuantity,
-        transaction: transaction.reference
-      });
+      entriesByYearMonth.get(key)?.push(entry);
     });
     
     // Build the year-month hierarchy
     const now = new Date();
-    const startYear = createdDate.getFullYear();
+    const earliestDate = stockHistoryEntries.length > 0 ? 
+      stockHistoryEntries[0].date : 
+      (data.created_at instanceof Date ? data.created_at : data.created_at.toDate());
+    const startYear = earliestDate.getFullYear();
     
     for (let year = startYear; year <= now.getFullYear(); year++) {
       const months = [];
       
       // Limit months in the first year to start from creation month
-      const startMonth = year === startYear ? createdDate.getMonth() : 0;
+      const startMonth = year === startYear ? earliestDate.getMonth() : 0;
       
       // Limit months in the current year to current month
       const endMonth = year === now.getFullYear() ? now.getMonth() : 11;
       
       for (let month = startMonth; month <= endMonth; month++) {
         const key = `${year}-${month}`;
-        const stockData = transactionsByYearMonth.get(key) || [];
+        const stockData = entriesByYearMonth.get(key) || [];
         
         // Only add months that have data
         if (stockData.length > 0) {
@@ -258,11 +216,11 @@ export class TrackStockPage implements OnInit {
     
     return {
       id,
-      name,
-      currentStock,
-      category,
-      price,
-      lowStockThreshold,
+      name: data.name,
+      currentStock: data.stock_quantity,
+      category: data.category,
+      price: data.price,
+      lowStockThreshold: data.low_stock_threshold,
       expanded: false,
       years
     };

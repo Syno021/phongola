@@ -83,11 +83,11 @@
             <ion-label position="floating">Low Stock Threshold</ion-label>
             <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
             <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
-            <ion-button slot="end" size="small" (click)="setEditThresholdToHalfStock()" fill="outline">Set to 50% of stock</ion-button>
+            <ion-button slot="end" size="small" (click)="setThresholdToHalfStock()" fill="outline">Set to 50% of stock</ion-button>
           </ion-item>
           
           <ion-item>
-            <ion-checkbox [(ngModel)]="autoEditThreshold" [ngModelOptions]="{standalone: true}"></ion-checkbox>
+            <ion-checkbox [(ngModel)]="autoThreshold" [ngModelOptions]="{standalone: true}"></ion-checkbox>
             <ion-label>Automatically set threshold to 50% of stock quantity</ion-label>
           </ion-item>
 
@@ -193,6 +193,7 @@
 </ion-content>
 
 <!-- Edit Product Modal -->
+<!-- Edit Product Modal -->
 <ion-modal [isOpen]="!!editingProduct">
   <ng-template>
     <ion-header>
@@ -209,27 +210,65 @@
           <ion-item>
             <ion-label position="floating">Product Name</ion-label>
             <ion-input formControlName="name" type="text"></ion-input>
+            <ion-note slot="error" *ngIf="editForm.get('name')?.touched && editForm.get('name')?.invalid">
+              Name is required
+            </ion-note>
           </ion-item>
 
           <ion-item>
             <ion-label position="floating">Description</ion-label>
             <ion-textarea formControlName="description" rows="3"></ion-textarea>
+            <ion-note slot="error" *ngIf="editForm.get('description')?.touched && editForm.get('description')?.invalid">
+              Description is required
+            </ion-note>
           </ion-item>
 
           <ion-item>
             <ion-label position="floating">Price</ion-label>
             <ion-input formControlName="price" type="number" min="0"></ion-input>
+            <ion-note slot="error" *ngIf="editForm.get('price')?.touched && editForm.get('price')?.invalid">
+              Valid price is required
+            </ion-note>
           </ion-item>
 
+          <!-- Readonly Current Stock Display -->
           <ion-item>
-            <ion-label position="floating">Stock Quantity</ion-label>
-            <ion-input formControlName="stock_quantity" type="number" min="0"></ion-input>
+            <ion-label position="floating">Current Stock Quantity</ion-label>
+            <ion-input formControlName="stock_quantity" type="number" readonly="true"></ion-input>
+            <ion-note slot="helper">This field is read-only. Use "Add Stock" below to increase inventory.</ion-note>
+          </ion-item>
+
+          <!-- Add Stock Field -->
+          <ion-item>
+            <ion-label position="floating">Add Stock</ion-label>
+            <ion-input formControlName="add_stock" type="number" min="0" placeholder="Enter quantity to add"></ion-input>
+            <ion-note slot="helper">Enter the number of units to add to current stock</ion-note>
+            <ion-note slot="error" *ngIf="editForm.get('add_stock')?.touched && editForm.get('add_stock')?.invalid">
+              Please enter a valid quantity
+            </ion-note>
+          </ion-item>
+
+          <!-- Stock Preview (if add_stock has value) -->
+          <ion-item *ngIf="editForm.get('add_stock')?.value && editForm.get('add_stock')?.value > 0">
+            <ion-label>
+              <h3>New Total Stock</h3>
+              <p>{{ editingProduct.stock_quantity + (editForm.get('add_stock')?.value || 0) }} units</p>
+              <small>Current: {{ editingProduct.stock_quantity }} + Adding: {{ editForm.get('add_stock')?.value }}</small>
+            </ion-label>
           </ion-item>
 
           <ion-item>
             <ion-label position="floating">Low Stock Threshold</ion-label>
             <ion-input formControlName="low_stock_threshold" type="number" min="1"></ion-input>
             <ion-note slot="helper">Items below this quantity will trigger a low stock alert</ion-note>
+            <ion-button slot="end" size="small" (click)="setEditThresholdToHalfStock()" fill="outline">
+              Set to 50% of total stock
+            </ion-button>
+          </ion-item>
+
+          <ion-item>
+            <ion-checkbox [(ngModel)]="autoEditThreshold" [ngModelOptions]="{standalone: true}"></ion-checkbox>
+            <ion-label>Automatically set threshold to 50% of total stock quantity</ion-label>
           </ion-item>
 
           <ion-item>
@@ -239,6 +278,9 @@
                 {{category | titlecase}}
               </ion-select-option>
             </ion-select>
+            <ion-note slot="error" *ngIf="editForm.get('category')?.touched && editForm.get('category')?.invalid">
+              Category is required
+            </ion-note>
           </ion-item>
 
           <ion-item>
@@ -249,6 +291,15 @@
                 {{promo.name}} ({{promo.discount_percentage}}% off)
               </ion-select-option>
             </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label>Product Image</ion-label>
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+          </ion-item>
+
+          <ion-item *ngIf="editForm.get('image_url')?.value">
+            <img [src]="editForm.get('image_url')?.value" style="max-width: 200px; margin: 10px auto;">
           </ion-item>
         </ion-list>
 

@@ -7,6 +7,21 @@ import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { runInInjectionContext } from '@angular/core';
+import { arrayUnion } from '@angular/fire/firestore';
+
+// Updated interface for enhanced stock tracking history
+interface StockUpdate {
+  date: Date;
+  previous_stock: number;
+  new_stock: number;
+  current_stock: number;
+  updated_by?: string; // Optional: track who made the update
+}
+
+// Interface for product with stock history
+interface ProductWithHistory extends Product {
+  stock_history?: StockUpdate[];
+}
 
 @Component({
   selector: 'app-admin-inventory',
@@ -63,11 +78,13 @@ export class AdminInventoryPage implements OnInit {
       low_stock_threshold: [this.defaultLowStockThreshold, [Validators.min(1)]]
     });
 
+    // Updated edit form with readonly stock_quantity and new add_stock field
     this.editForm = this.formBuilder.group({
       name: ['', [Validators.required]],
       description: ['', [Validators.required]],
       price: ['', [Validators.required, Validators.min(0)]],
-      stock_quantity: ['', [Validators.required, Validators.min(0)]],
+      stock_quantity: [{value: '', disabled: true}], // Made readonly
+      add_stock: ['', [Validators.min(0)]], // New field for adding stock
       category: ['', [Validators.required]],
       image_url: [''],
       promotion_id: [null],
@@ -84,20 +101,24 @@ export class AdminInventoryPage implements OnInit {
     
     // Add listener for stock quantity changes in product form to update threshold
     this.productForm.get('stock_quantity')?.valueChanges.subscribe(stockQuantity => {
-      // Only update if the "auto threshold" checkbox is checked
-      if (this.autoThreshold && stockQuantity && !isNaN(stockQuantity)) {
+      if (this.autoThreshold && stockQuantity && !isNaN(stockQuantity) && stockQuantity > 0) {
         const halfStock = Math.ceil(stockQuantity * 0.5);
         this.productForm.patchValue({
           low_stock_threshold: halfStock > 0 ? halfStock : 1
         }, { emitEvent: false });
+      } else if (this.autoThreshold) {
+        this.productForm.patchValue({
+          low_stock_threshold: this.defaultLowStockThreshold
+        }, { emitEvent: false });
       }
     });
     
-    // Add listener for stock quantity changes in edit form to update threshold
-    this.editForm.get('stock_quantity')?.valueChanges.subscribe(stockQuantity => {
-      // Only update if the "auto threshold" checkbox is checked
-      if (this.autoEditThreshold && stockQuantity && !isNaN(stockQuantity)) {
-        const halfStock = Math.ceil(stockQuantity * 0.5);
+    // Updated listener for add_stock changes in edit form to update threshold
+    this.editForm.get('add_stock')?.valueChanges.subscribe(addStock => {
+      if (this.autoEditThreshold && this.editingProduct) {
+        const currentStock = this.editingProduct.stock_quantity;
+        const newTotalStock = currentStock + (addStock || 0);
+        const halfStock = Math.ceil(newTotalStock * 0.5);
         this.editForm.patchValue({
           low_stock_threshold: halfStock > 0 ? halfStock : 1
         }, { emitEvent: false });
@@ -178,13 +199,12 @@ export class AdminInventoryPage implements OnInit {
     }
   }
 
-  // In your component.ts file
-toJsDate(dateValue: any): Date {
-  if (dateValue && typeof dateValue.toDate === 'function') {
-    return dateValue.toDate(); // Convert Firestore Timestamp to JS Date
+  toJsDate(dateValue: any): Date {
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate(); // Convert Firestore Timestamp to JS Date
+    }
+    return dateValue; // Already a Date or null/undefined
   }
-  return dateValue; // Already a Date or null/undefined
-}
   
   filterLowStockOnly() {
     this.stockFilterOption = 'low';
@@ -197,6 +217,9 @@ toJsDate(dateValue: any): Date {
     }
   }
 
+  /**
+   * Create initial product with enhanced stock history in both collections
+   */
   async onSubmit() {
     if (this.productForm.invalid) {
       Object.keys(this.productForm.controls).forEach(key => {
@@ -209,7 +232,6 @@ toJsDate(dateValue: any): Date {
       return;
     }
 
-    // If auto threshold is enabled, calculate and set 50% of stock as threshold
     if (this.autoThreshold) {
       const stockQuantity = this.productForm.get('stock_quantity')?.value;
       if (stockQuantity && !isNaN(stockQuantity)) {
@@ -240,29 +262,57 @@ toJsDate(dateValue: any): Date {
         nextProductId = (highestProduct.product_id || 0) + 1;
       }
 
+      const currentDate = new Date();
+      const stockQuantity = this.productForm.get('stock_quantity')?.value;
+
       const product: Product = {
         product_id: nextProductId,
         ...this.productForm.value,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: currentDate,
+        updated_at: currentDate
       };
 
-      // If no promotion is selected, ensure promotion_id is undefined
       if (!product.promotion_id) {
         delete product.promotion_id;
       }
 
-      await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, () =>
-          this.firestore.collection('products').doc(nextProductId.toString()).set(product)
-        )
+      // Create product with enhanced stock history for tracking collection
+      const productWithHistory: ProductWithHistory = {
+        ...product,
+        stock_history: [
+          {
+            date: currentDate,
+            previous_stock: 0, // No previous stock for new product
+            new_stock: stockQuantity,
+            current_stock: stockQuantity,
+            updated_by: 'admin'
+          }
+        ]
+      };
+
+      const batch = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, async () => {
+          const batch = this.firestore.firestore.batch();
+          
+          // Add to main products collection
+          const productsRef = this.firestore.collection('products').doc(nextProductId.toString()).ref;
+          batch.set(productsRef, product);
+          
+          // Add to products_history collection with initial stock history
+          const historyRef = this.firestore.collection('products_history').doc(nextProductId.toString()).ref;
+          batch.set(historyRef, productWithHistory);
+          
+          return batch;
+        })
       );
 
-      this.showToast('New product has been added successfully');
+      await batch.commit();
+
+      this.showToast('New product has been added successfully with stock tracking enabled');
       this.productForm.reset({
-        low_stock_threshold: this.defaultLowStockThreshold // Reset with default value
+        low_stock_threshold: this.defaultLowStockThreshold
       });
-      this.autoThreshold = false; // Reset auto threshold flag
+      this.autoThreshold = false;
       this.selectedFile = null;
     } catch (error) {
       console.error(error);
@@ -298,7 +348,8 @@ toJsDate(dateValue: any): Date {
       name: product.name,
       description: product.description,
       price: product.price,
-      stock_quantity: product.stock_quantity,
+      stock_quantity: product.stock_quantity, // This will be readonly in the form
+      add_stock: '', // Reset add stock field
       category: product.category,
       image_url: product.image_url,
       promotion_id: product.promotion_id || null,
@@ -318,52 +369,88 @@ toJsDate(dateValue: any): Date {
     this.autoEditThreshold = false;
   }
 
+  /**
+   * Save product updates with enhanced stock tracking
+   */
   async saveEdit() {
     if (this.editForm.invalid || !this.editingProduct) {
       return;
     }
 
-    // If auto edit threshold is enabled, calculate and set 50% of stock as threshold
+    const addStockValue = this.editForm.get('add_stock')?.value || 0;
+    const currentStock = this.editingProduct.stock_quantity;
+    const newTotalStock = currentStock + addStockValue;
+
     if (this.autoEditThreshold) {
-      const stockQuantity = this.editForm.get('stock_quantity')?.value;
-      if (stockQuantity && !isNaN(stockQuantity)) {
-        const halfStock = Math.ceil(stockQuantity * 0.5);
-        this.editForm.patchValue({
-          low_stock_threshold: halfStock > 0 ? halfStock : 1
-        });
-      }
+      const halfStock = Math.ceil(newTotalStock * 0.5);
+      this.editForm.patchValue({
+        low_stock_threshold: halfStock > 0 ? halfStock : 1
+      });
     }
 
     this.isSubmitting = true;
 
     try {
+      const currentDate = new Date();
+
       const updatedProduct = {
         ...this.editingProduct,
-        ...this.editForm.value,
-        updated_at: new Date()
+        name: this.editForm.get('name')?.value,
+        description: this.editForm.get('description')?.value,
+        price: this.editForm.get('price')?.value,
+        stock_quantity: newTotalStock,
+        category: this.editForm.get('category')?.value,
+        image_url: this.editForm.get('image_url')?.value,
+        promotion_id: this.editForm.get('promotion_id')?.value,
+        low_stock_threshold: this.editForm.get('low_stock_threshold')?.value,
+        updated_at: currentDate
       };
 
-      // If no promotion is selected, remove promotion_id
       if (!updatedProduct.promotion_id) {
         delete updatedProduct.promotion_id;
       }
 
-      await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, () =>
-          this.firestore
-            .collection('products')
-            .doc(this.editingProduct!.product_id.toString())
-            .update(updatedProduct)
-        )
+      const batch = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, async () => {
+          const batch = this.firestore.firestore.batch();
+          
+          const productsRef = this.firestore.collection('products').doc(this.editingProduct!.product_id.toString()).ref;
+          batch.update(productsRef, updatedProduct);
+          
+          const historyRef = this.firestore.collection('products_history').doc(this.editingProduct!.product_id.toString()).ref;
+          batch.update(historyRef, updatedProduct);
+          
+          const stockUpdate: StockUpdate = {
+            date: currentDate,
+            previous_stock: currentStock,
+            new_stock: addStockValue,
+            current_stock: newTotalStock,
+            updated_by: 'admin'
+          };
+          
+          batch.update(historyRef, {
+            stock_history: arrayUnion(stockUpdate)
+          });
+          
+          return batch;
+        })
       );
 
+      await batch.commit();
+
+      // Update local products array
       const index = this.products.findIndex(p => p.product_id === this.editingProduct!.product_id);
       if (index !== -1) {
         this.products[index] = updatedProduct;
       }
       this.filterProducts();
 
-      this.showToast('Product details have been updated successfully');
+      if (addStockValue > 0) {
+        this.showToast(`Product updated successfully. Added ${addStockValue} units to stock. New total: ${newTotalStock}`);
+      } else {
+        this.showToast('Product details updated successfully');
+      }
+      
       this.cancelEdit();
     } catch (error) {
       console.error('Error updating product:', error);
@@ -373,19 +460,47 @@ toJsDate(dateValue: any): Date {
     }
   }
 
+  /**
+   * Delete product from both collections
+   */
   async deleteProduct(product: Product) {
     try {
-      await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, () =>
-          this.firestore.collection('products').doc(product.product_id.toString()).delete()
-        )
-      );
+      const batch = this.firestore.firestore.batch();
+      
+      // Delete from main products collection
+      const productsRef = this.firestore.collection('products').doc(product.product_id.toString()).ref;
+      batch.delete(productsRef);
+      
+      // Delete from products_history collection
+      const historyRef = this.firestore.collection('products_history').doc(product.product_id.toString()).ref;
+      batch.delete(historyRef);
+
+      await batch.commit();
+
+      // Update local products array
       this.products = this.products.filter(p => p.product_id !== product.product_id);
       this.filterProducts();
-      this.showToast('Product has been removed from inventory');
+      this.showToast('Product and its history have been removed from inventory');
     } catch (error) {
       console.error('Error deleting product:', error);
       this.showToast('Unable to delete product. Please try again');
+    }
+  }
+
+  /**
+   * Method to get enhanced stock history for a specific product
+   */
+  async getProductStockHistory(productId: number): Promise<StockUpdate[]> {
+    try {
+      const doc = await this.firestore.collection('products_history').doc(productId.toString()).get().toPromise();
+      if (doc?.exists) {
+        const productData = doc.data() as ProductWithHistory;
+        return productData.stock_history || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching stock history:', error);
+      return [];
     }
   }
 
@@ -402,7 +517,6 @@ toJsDate(dateValue: any): Date {
   }
   
   // Stock status methods
-  // Stock status methods
   isLowStock(product: Product): boolean {
     const threshold = product.low_stock_threshold || this.defaultLowStockThreshold;
     return product.stock_quantity > 0 && product.stock_quantity <= threshold;
@@ -418,11 +532,11 @@ toJsDate(dateValue: any): Date {
   
   getStockStatusColor(product: Product): string {
     if (this.isOutOfStock(product)) {
-      return 'light';  // Grey background for out of stock
+      return 'light';
     } else if (this.isLowStock(product)) {
-      return 'warning-tint'; // Light yellow/orange background for low stock
+      return 'warning-tint';
     }
-    return ''; // Default background
+    return '';
   }
   
   getStockStatusIcon(product: Product): string {
@@ -446,21 +560,26 @@ toJsDate(dateValue: any): Date {
   // Set threshold to 50% of stock quantity for new product form
   setThresholdToHalfStock() {
     const stockQuantity = this.productForm.get('stock_quantity')?.value;
-    if (stockQuantity && !isNaN(stockQuantity)) {
+    if (stockQuantity && !isNaN(stockQuantity) && stockQuantity > 0) {
       const halfStock = Math.ceil(stockQuantity * 0.5);
       this.productForm.patchValue({
         low_stock_threshold: halfStock > 0 ? halfStock : 1
       });
     } else {
-      this.showToast('Please set a valid stock quantity first', 'warning');
+      this.showToast('Please enter a valid stock quantity first', 'warning');
     }
   }
   
-  // Set threshold to 50% of stock quantity for edit form
+  // Set threshold to 50% of total stock quantity (current + added) for edit form
   setEditThresholdToHalfStock() {
-    const stockQuantity = this.editForm.get('stock_quantity')?.value;
-    if (stockQuantity && !isNaN(stockQuantity)) {
-      const halfStock = Math.ceil(stockQuantity * 0.5);
+    if (!this.editingProduct) return;
+    
+    const addStockValue = this.editForm.get('add_stock')?.value || 0;
+    const currentStock = this.editingProduct.stock_quantity;
+    const totalStock = currentStock + addStockValue;
+    
+    if (totalStock > 0) {
+      const halfStock = Math.ceil(totalStock * 0.5);
       this.editForm.patchValue({
         low_stock_threshold: halfStock > 0 ? halfStock : 1
       });
@@ -479,7 +598,6 @@ toJsDate(dateValue: any): Date {
   }
 
   private async showToast(message: string, color: string = 'success') {
-    // Use 'success' for success messages, 'danger' for errors, 'warning' for warnings
     if (message.includes('Error')) {
       color = 'danger';
     }
@@ -493,7 +611,6 @@ toJsDate(dateValue: any): Date {
     toast.present();
   }
   
-
   async logout() {
     try {
       await this.auth.signOut();
