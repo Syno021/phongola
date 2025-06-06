@@ -218,105 +218,139 @@ export class CartPage implements OnInit, OnDestroy {
   }
 
   async verifyTransaction(reference: string) {
-    const loading = await this.loadingController.create({
-      message: 'Verifying your payment...',
-      spinner: 'circles'
-    });
-    await loading.present();
-  
-    try {
-      // Get the delivery address if delivery method is selected
-      let deliveryAddress = null;
-      if (this.deliveryMethod === 'delivery') {
-        if (this.selectedAddressId && !this.showNewAddressForm) {
-          // Use selected saved address
-          deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
-        } else {
-          // Use new address from form
-          deliveryAddress = this.addressForm.value;
-          
-          // Save the new address to Firestore if form is valid
-          if (this.addressForm.valid) {
-            await this.saveNewAddress();
-          }
+  const loading = await this.loadingController.create({
+    message: 'Verifying your payment...',
+    spinner: 'circles'
+  });
+  await loading.present();
+
+  try {
+    // Get the delivery address if delivery method is selected
+    let deliveryAddress = null;
+    if (this.deliveryMethod === 'delivery') {
+      if (this.selectedAddressId && !this.showNewAddressForm) {
+        // Use selected saved address
+        deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
+      } else {
+        // Use new address from form
+        deliveryAddress = this.addressForm.value;
+        
+        // Save the new address to Firestore if form is valid
+        if (this.addressForm.valid) {
+          await this.saveNewAddress();
         }
       }
-      
-      // Generate a unique order ID
-      const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
-      
-      // Create the main order record with all details
-      const orderData = {
-        order_id: orderId,
-        amount: this.total,
-        user_email: this.userEmail,
-        user_id: this.userId,
-        status: 'processing',
-        payment_status: 'paid',
-        payment_reference: reference,
-        created_at: new Date(),
-        delivery_method: this.deliveryMethod,
-        delivery_address: deliveryAddress,
-        delivery_fee: this.deliveryMethod === 'delivery' ? this.deliveryFee : 0,
-        items: this.cartItems.map(item => ({
-          product_id: item.product_id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        }))
-      };
-  
-      // Save the order to Firestore
-      await this.ngZone.run(() => {
-        return runInInjectionContext(this.injector, async () => {
-          return this.firestore.collection('orders').doc(orderId).set(orderData);
-        });
-      });
-      
-      // Also save minimal payment record with reference to the order
-      await this.ngZone.run(() => {
-        return runInInjectionContext(this.injector, async () => {
-          return this.firestore.collection('payments').doc(reference).set({
-            order_id: orderId,
-            amount: this.total,
-            status: 'successful',
-            created_at: new Date(),
-            payment_method: 'paystack',
-            user_id: this.userId
-          });
-        });
-      });
-      
-      // Clear the cart
-      this.cartService.clearCart();
-      
-      loading.dismiss();
-      
-      // Show success message and navigate to confirmation page
-      const alert = await this.alertController.create({
-        header: 'Order Placed!',
-        message: 'Your payment was successful and your order has been placed.',
-        buttons: [{
-          text: 'OK',
-          handler: () => {
-            this.router.navigate(['/order-confirmation'], {
-              queryParams: {
-                orderId: orderId,
-                paymentRef: reference,
-                deliveryMethod: this.deliveryMethod
-              }
-            });
-          }
-        }]
-      });
-      await alert.present();
-      
-    } catch (error) {
-      loading.dismiss();
-      console.error('Error saving payment:', error);
-      this.presentToast('Payment verification failed. Please contact support.');
     }
+    
+    // Generate a unique order ID
+    const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
+    
+    // Create the main order record with all details
+    const orderData = {
+      order_id: orderId,
+      amount: this.total,
+      user_email: this.userEmail,
+      user_id: this.userId,
+      status: 'processing',
+      payment_status: 'paid',
+      payment_reference: reference,
+      created_at: new Date(),
+      delivery_method: this.deliveryMethod,
+      delivery_address: deliveryAddress,
+      delivery_fee: this.deliveryMethod === 'delivery' ? this.deliveryFee : 0,
+      items: this.cartItems.map(item => ({
+        product_id: item.product_id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }))
+    };
+
+    // Save the order to Firestore
+    await this.ngZone.run(() => {
+      return runInInjectionContext(this.injector, async () => {
+        return this.firestore.collection('orders').doc(orderId).set(orderData);
+      });
+    });
+    
+    // Also save minimal payment record with reference to the order
+    await this.ngZone.run(() => {
+      return runInInjectionContext(this.injector, async () => {
+        return this.firestore.collection('payments').doc(reference).set({
+          order_id: orderId,
+          amount: this.total,
+          status: 'successful',
+          created_at: new Date(),
+          payment_method: 'paystack',
+          user_id: this.userId
+        });
+      });
+    });
+    
+    // *** ADD THIS LINE - Update product quantities ***
+    await this.updateProductQuantities(this.cartItems);
+    
+    // Clear the cart
+    this.cartService.clearCart();
+    
+    loading.dismiss();
+    
+    // Show success message and navigate to confirmation page
+    const alert = await this.alertController.create({
+      header: 'Order Placed!',
+      message: 'Your payment was successful and your order has been placed.',
+      buttons: [{
+        text: 'OK',
+        handler: () => {
+          this.router.navigate(['/order-confirmation'], {
+            queryParams: {
+              orderId: orderId,
+              paymentRef: reference,
+              deliveryMethod: this.deliveryMethod
+            }
+          });
+        }
+      }]
+    });
+    await alert.present();
+    
+  } catch (error) {
+    loading.dismiss();
+    console.error('Error saving payment:', error);
+    this.presentToast('Payment verification failed. Please contact support.');
   }
+}
+
+  private async updateProductQuantities(items: CartItem[]) {
+  try {
+    await this.ngZone.run(() => {
+      return runInInjectionContext(this.injector, async () => {
+        const batch = this.firestore.firestore.batch();
+        
+        for (const item of items) {
+          const productRef = this.firestore.doc(`products/${item.product_id}`).ref;
+          
+          // Get current product data
+          const productDoc = await productRef.get();
+          if (productDoc.exists) {
+            const currentStock = (productDoc.data() as { stock_quantity?: number })?.stock_quantity || 0;
+            const newStock = Math.max(0, currentStock - item.quantity);
+            
+            // Update the stock quantity
+            batch.update(productRef, { stock_quantity: newStock });
+          }
+        }
+        
+        // Commit all updates
+        await batch.commit();
+      });
+    });
+    console.log('Product quantities updated successfully');
+  } catch (error) {
+    console.error('Error updating product quantities:', error);
+    throw error;
+  }
+}
 
   private async loadCartItems() {
     this.isLoading = true;
@@ -458,124 +492,127 @@ export class CartPage implements OnInit, OnDestroy {
   
   // Process order with delivery
   async processDeliveryOrder() {
-    const loading = await this.loadingController.create({
-      message: 'Processing your order...',
-      spinner: 'circles'
-    });
-    await loading.present();
+  const loading = await this.loadingController.create({
+    message: 'Processing your order...',
+    spinner: 'circles'
+  });
+  await loading.present();
+  
+  try {
+    // Generate a unique order ID
+    const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
     
-    try {
-      // Generate a unique order ID
-      const orderId = `ORD_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`;
-      
-      // Get the delivery address
-      let deliveryAddress = null;
-      if (this.selectedAddressId && !this.showNewAddressForm) {
-        deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
-      } else {
-        deliveryAddress = this.addressForm.value;
-        await this.saveNewAddress();
-      }
-  
-      // Initialize Paystack payment
-      const amountInCents = Math.round(this.total * 100);
-      const handler = window.PaystackPop.setup({
-        key: environment.paystackTestPublicKey,
-        email: this.userEmail,
-        amount: amountInCents,
-        currency: 'ZAR',
-        ref: orderId, // Use orderId as payment reference for consistency
-        onClose: () => {
-          console.log('Payment window closed');
-          loading.dismiss();
-        },
-        callback: async (response: any) => {
-          try {
-            // Save comprehensive order details to Firestore
-            const orderData = {
-              order_id: orderId,
-              amount: this.total,
-              user_email: this.userEmail,
-              user_id: this.userId,
-              status: 'processing',
-              payment_status: 'paid',
-              payment_reference: response.reference,
-              created_at: new Date(),
-              delivery_method: this.deliveryMethod,
-              delivery_address: deliveryAddress,
-              delivery_fee: this.deliveryFee,
-              items: this.cartItems.map(item => ({
-                product_id: item.product_id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity
-              }))
-            };
-            
-            // Save the order to Firestore
-            await this.ngZone.run(() => {
-              return runInInjectionContext(this.injector, async () => {
-                await this.firestore.collection('orders').doc(orderId).set(orderData);
-              });
-            });
-  
-            // Also save minimal payment record with reference to the order
-            await this.ngZone.run(() => {
-              return runInInjectionContext(this.injector, async () => {
-                await this.firestore.collection('payments').doc(response.reference).set({
-                  order_id: orderId,
-                  amount: this.total,
-                  status: 'successful',
-                  created_at: new Date(),
-                  payment_method: 'paystack',
-                  user_id: this.userId
-                });
-              });
-            });
-            
-            // Clear the cart
-            this.cartService.clearCart();
-            
-            loading.dismiss();
-            
-            // Show success message
-            const alert = await this.alertController.create({
-              header: 'Order Placed!',
-              message: 'Your payment was successful and your order will be delivered to your address.',
-              buttons: [{
-                text: 'OK',
-                handler: () => {
-                  this.router.navigate(['/order-confirmation'], {
-                    queryParams: {
-                      orderId: orderId,
-                      paymentRef: response.reference,
-                      deliveryMethod: this.deliveryMethod
-                    }
-                  });
-                }
-              }]
-            });
-            await alert.present();
-          } catch (error) {
-            console.error('Error processing order:', error);
-            loading.dismiss();
-            this.presentToast('Error processing your order. Please try again.');
-          }
-        },
-        onError: async (error: any) => {
-          console.error('Payment error:', error);
-          loading.dismiss();
-          await this.presentToast(`Payment error: ${error.message || 'Unknown error occurred'}`);
-        }
-      });
-  
-      handler.openIframe();
-    } catch (error) {
-      loading.dismiss();
-      console.error('Error initializing payment:', error);
-      this.presentToast('Failed to initialize payment. Please try again.');
+    // Get the delivery address
+    let deliveryAddress = null;
+    if (this.selectedAddressId && !this.showNewAddressForm) {
+      deliveryAddress = this.savedAddresses.find(addr => addr.address_id === this.selectedAddressId);
+    } else {
+      deliveryAddress = this.addressForm.value;
+      await this.saveNewAddress();
     }
+
+    // Initialize Paystack payment
+    const amountInCents = Math.round(this.total * 100);
+    const handler = window.PaystackPop.setup({
+      key: environment.paystackTestPublicKey,
+      email: this.userEmail,
+      amount: amountInCents,
+      currency: 'ZAR',
+      ref: orderId, // Use orderId as payment reference for consistency
+      onClose: () => {
+        console.log('Payment window closed');
+        loading.dismiss();
+      },
+      callback: async (response: any) => {
+        try {
+          // Save comprehensive order details to Firestore
+          const orderData = {
+            order_id: orderId,
+            amount: this.total,
+            user_email: this.userEmail,
+            user_id: this.userId,
+            status: 'processing',
+            payment_status: 'paid',
+            payment_reference: response.reference,
+            created_at: new Date(),
+            delivery_method: this.deliveryMethod,
+            delivery_address: deliveryAddress,
+            delivery_fee: this.deliveryFee,
+            items: this.cartItems.map(item => ({
+              product_id: item.product_id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            }))
+          };
+          
+          // Save the order to Firestore
+          await this.ngZone.run(() => {
+            return runInInjectionContext(this.injector, async () => {
+              await this.firestore.collection('orders').doc(orderId).set(orderData);
+            });
+          });
+
+          // Also save minimal payment record with reference to the order
+          await this.ngZone.run(() => {
+            return runInInjectionContext(this.injector, async () => {
+              await this.firestore.collection('payments').doc(response.reference).set({
+                order_id: orderId,
+                amount: this.total,
+                status: 'successful',
+                created_at: new Date(),
+                payment_method: 'paystack',
+                user_id: this.userId
+              });
+            });
+          });
+          
+          // *** ADD THIS LINE - Update product quantities ***
+          await this.updateProductQuantities(this.cartItems);
+          
+          // Clear the cart
+          this.cartService.clearCart();
+          
+          loading.dismiss();
+          
+          // Show success message
+          const alert = await this.alertController.create({
+            header: 'Order Placed!',
+            message: 'Your payment was successful and your order will be delivered to your address.',
+            buttons: [{
+              text: 'OK',
+              handler: () => {
+                this.router.navigate(['/order-confirmation'], {
+                  queryParams: {
+                    orderId: orderId,
+                    paymentRef: response.reference,
+                    deliveryMethod: this.deliveryMethod
+                  }
+                });
+              }
+            }]
+          });
+          await alert.present();
+        } catch (error) {
+          console.error('Error processing order:', error);
+          loading.dismiss();
+          this.presentToast('Error processing your order. Please try again.');
+        }
+      },
+      onError: async (error: any) => {
+        console.error('Payment error:', error);
+        loading.dismiss();
+        await this.presentToast(`Payment error: ${error.message || 'Unknown error occurred'}`);
+      }
+    });
+
+    handler.openIframe();
+  } catch (error) {
+    loading.dismiss();
+    console.error('Error initializing payment:', error);
+    this.presentToast('Failed to initialize payment. Please try again.');
   }
+}
 
   async saveNewAddress() {
     if (!this.addressForm.valid || !this.userId) return;
@@ -834,42 +871,44 @@ async saveEditedAddress() {
   const formValues = this.addressForm.value;
   const addressId = formValues.address_id;
   
+  // Create the updated address object
+  const updatedAddress = {
+    address_line1: formValues.address_line1,
+    address_line2: formValues.address_line2,
+    city: formValues.city,
+    state: formValues.state,
+    postal_code: formValues.postal_code,
+    country: formValues.country,
+    is_default: formValues.is_default
+  };
+  
   try {
-    // Check if this is set as default and we need to update other addresses
     if (formValues.is_default) {
-      // Find all existing default addresses and update them
       const defaultAddressesSnapshot = await this.ngZone.run(() => {
         return runInInjectionContext(this.injector, async () => {
           return this.firestore
-            .collection<CustomerAddress>('customer_addresses', ref => 
-              ref.where('user_id', '==', this.userId)
-                .where('is_default', '==', true)
-                .where('address_id', '!=', addressId))
-            .get()
-            .toPromise();
+            .collection<CustomerAddress>('customer_addresses')
+            .ref.where('user_id', '==', this.userId)
+            .where('is_default', '==', true)
+            .where('address_id', '!=', addressId)
+            .get();
         });
       });
       
       if (defaultAddressesSnapshot) {
-        const batch = this.firestore.firestore.batch();
-        defaultAddressesSnapshot.docs.forEach(doc => {
-          batch.update(doc.ref, { is_default: false });
+        await this.ngZone.run(() => {
+          return runInInjectionContext(this.injector, async () => {
+            const batch = this.firestore.firestore.batch();
+            defaultAddressesSnapshot.docs.forEach(doc => {
+              batch.update(doc.ref, { is_default: false });
+            });
+            await batch.commit();
+          });
         });
-        await batch.commit();
       }
     }
     
     // Update the address
-    const updatedAddress: Partial<CustomerAddress> = {
-      address_line1: formValues.address_line1,
-      address_line2: formValues.address_line2,
-      city: formValues.city,
-      state: formValues.state,
-      postal_code: formValues.postal_code,
-      country: formValues.country,
-      is_default: formValues.is_default
-    };
-    
     await this.ngZone.run(() => {
       return runInInjectionContext(this.injector, async () => {
         return this.firestore.doc(`customer_addresses/${addressId}`).update(updatedAddress);
