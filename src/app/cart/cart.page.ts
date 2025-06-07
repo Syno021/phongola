@@ -381,14 +381,73 @@ export class CartPage implements OnInit, OnDestroy {
     });
   }
 
-  updateQuantity(item: CartItem, change: number) {
-    const newQuantity = item.quantity + change;
-    if (newQuantity > 0) {
-      this.cartService.updateQuantity(item.product_id, newQuantity);
+  async updateQuantity(item: CartItem, change: number) {
+  const newQuantity = item.quantity + change;
+  
+  if (newQuantity <= 0) {
+    this.confirmRemoveItem(item);
+    return;
+  }
+  
+  try {
+    // Get current product data to check stock
+    const productDoc = await this.ngZone.run(() => {
+      return runInInjectionContext(this.injector, async () => {
+        return this.firestore.doc(`products/${item.product_id}`).get().toPromise();
+      });
+    });
+    
+    const productData = productDoc?.data() as Product;
+    if (!productData) {
+      this.presentToast('Unable to verify stock for this item');
+      return;
+    }
+    
+    if (newQuantity > productData.stock_quantity) {
+      this.presentToast(`Sorry, only ${productData.stock_quantity} items are available in stock`);
+      return;
+    }
+    
+    // Update quantity through cart service with stock validation
+    await this.cartService.updateQuantity(item.product_id, newQuantity, productData.stock_quantity);
+    
+  } catch (error) {
+    console.error('Error updating quantity:', error);
+    if (error instanceof Error) {
+      this.presentToast(error.message);
     } else {
-      this.confirmRemoveItem(item);
+      this.presentToast('Unable to update quantity. Please try again.');
     }
   }
+}
+
+private async validateCartStock(): Promise<boolean> {
+  try {
+    for (const item of this.cartItems) {
+      const productDoc = await this.ngZone.run(() => {
+        return runInInjectionContext(this.injector, async () => {
+          return this.firestore.doc(`products/${item.product_id}`).get().toPromise();
+        });
+      });
+      
+      const productData = productDoc?.data() as Product;
+      if (!productData) {
+        this.presentToast(`Unable to verify stock for ${item.name}`);
+        return false;
+      }
+      
+      if (item.quantity > productData.stock_quantity) {
+        this.presentToast(`Sorry, only ${productData.stock_quantity} ${item.name} items are available. Please update your cart.`);
+        return false;
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error('Error validating cart stock:', error);
+    this.presentToast('Unable to verify stock availability. Please try again.');
+    return false;
+  }
+}
 
   async confirmRemoveItem(item: CartItem) {
     const alert = await this.alertController.create({
@@ -447,33 +506,39 @@ export class CartPage implements OnInit, OnDestroy {
     toast.present();
   }
 
-  proceedToCheckout() {
-    if (this.cartItems.length === 0) {
-      this.presentToast('Please add items to your cart before checking out');
+  async proceedToCheckout() {
+  if (this.cartItems.length === 0) {
+    this.presentToast('Please add items to your cart before checking out');
+    return;
+  }
+  
+  // Validate stock before proceeding
+  const stockValid = await this.validateCartStock();
+  if (!stockValid) {
+    return;
+  }
+  
+  // Check if delivery method and address are valid if delivery is selected
+  if (this.deliveryMethod === 'delivery') {
+    if (!this.isValidDeliverySelection()) {
+      this.presentToast('Please provide a delivery address to continue');
       return;
     }
     
-    // Check if delivery method and address are valid if delivery is selected
-    if (this.deliveryMethod === 'delivery') {
-      if (!this.isValidDeliverySelection()) {
-        this.presentToast('Please provide a delivery address to continue');
-        return;
-      }
-      
-      // If using new address form, validate it
-      if (this.showNewAddressForm && !this.addressForm.valid) {
-        this.markFormGroupTouched(this.addressForm);
-        this.presentToast('Please complete all required address fields');
-        return;
-      }
-      
-      // Process the order with delivery
-      this.processDeliveryOrder();
-    } else {
-      // Start the online payment process
-      this.makePayment();
+    // If using new address form, validate it
+    if (this.showNewAddressForm && !this.addressForm.valid) {
+      this.markFormGroupTouched(this.addressForm);
+      this.presentToast('Please complete all required address fields');
+      return;
     }
+    
+    // Process the order with delivery
+    this.processDeliveryOrder();
+  } else {
+    // Start the online payment process
+    this.makePayment();
   }
+}
   
   // Helper method to mark all form controls as touched
   markFormGroupTouched(formGroup: FormGroup) {

@@ -370,112 +370,149 @@ export class AdminInventoryPage implements OnInit {
   }
 
   /**
-   * Save product updates with enhanced stock tracking
-   */
-  async saveEdit() {
-    if (this.editForm.invalid || !this.editingProduct) {
-      return;
+ * Save product updates with enhanced stock tracking
+ * Updates products_history only if the product exists in that collection
+ */
+async saveEdit() {
+  if (this.editForm.invalid || !this.editingProduct) {
+    return;
+  }
+
+  const addStockValue = this.editForm.get('add_stock')?.value || 0;
+  const currentStock = this.editingProduct.stock_quantity;
+  const newTotalStock = currentStock + addStockValue;
+
+  if (this.autoEditThreshold) {
+    const halfStock = Math.ceil(newTotalStock * 0.5);
+    this.editForm.patchValue({
+      low_stock_threshold: halfStock > 0 ? halfStock : 1
+    });
+  }
+
+  this.isSubmitting = true;
+
+  try {
+    const currentDate = new Date();
+
+    const updatedProduct = {
+      ...this.editingProduct,
+      name: this.editForm.get('name')?.value,
+      description: this.editForm.get('description')?.value,
+      price: this.editForm.get('price')?.value,
+      stock_quantity: newTotalStock,
+      category: this.editForm.get('category')?.value,
+      image_url: this.editForm.get('image_url')?.value,
+      promotion_id: this.editForm.get('promotion_id')?.value,
+      low_stock_threshold: this.editForm.get('low_stock_threshold')?.value,
+      updated_at: currentDate
+    };
+
+    if (!updatedProduct.promotion_id) {
+      delete updatedProduct.promotion_id;
     }
 
-    const addStockValue = this.editForm.get('add_stock')?.value || 0;
-    const currentStock = this.editingProduct.stock_quantity;
-    const newTotalStock = currentStock + addStockValue;
+    // Check if product exists in products_history collection
+    const historyDoc = await this.ngZone.run(() =>
+      runInInjectionContext(this.injector, () =>
+        this.firestore.collection('products_history')
+          .doc(this.editingProduct!.product_id.toString())
+          .get()
+          .toPromise()
+      )
+    );
 
-    if (this.autoEditThreshold) {
-      const halfStock = Math.ceil(newTotalStock * 0.5);
-      this.editForm.patchValue({
-        low_stock_threshold: halfStock > 0 ? halfStock : 1
-      });
-    }
-
-    this.isSubmitting = true;
-
-    try {
-      const currentDate = new Date();
-
-      const updatedProduct = {
-        ...this.editingProduct,
-        name: this.editForm.get('name')?.value,
-        description: this.editForm.get('description')?.value,
-        price: this.editForm.get('price')?.value,
-        stock_quantity: newTotalStock,
-        category: this.editForm.get('category')?.value,
-        image_url: this.editForm.get('image_url')?.value,
-        promotion_id: this.editForm.get('promotion_id')?.value,
-        low_stock_threshold: this.editForm.get('low_stock_threshold')?.value,
-        updated_at: currentDate
-      };
-
-      if (!updatedProduct.promotion_id) {
-        delete updatedProduct.promotion_id;
-      }
-
-      const batch = await this.ngZone.run(() =>
-        runInInjectionContext(this.injector, async () => {
-          const batch = this.firestore.firestore.batch();
+    const batch = await this.ngZone.run(() =>
+      runInInjectionContext(this.injector, async () => {
+        const batch = this.firestore.firestore.batch();
+        
+        // Always update the main products collection
+        const productsRef = this.firestore.collection('products')
+          .doc(this.editingProduct!.product_id.toString()).ref;
+        batch.update(productsRef, updatedProduct);
+        
+        // Only update products_history if the document exists
+        if (historyDoc?.exists) {
+          const historyRef = this.firestore.collection('products_history')
+            .doc(this.editingProduct!.product_id.toString()).ref;
           
-          const productsRef = this.firestore.collection('products').doc(this.editingProduct!.product_id.toString()).ref;
-          batch.update(productsRef, updatedProduct);
-          
-          const historyRef = this.firestore.collection('products_history').doc(this.editingProduct!.product_id.toString()).ref;
+          // Update the product details
           batch.update(historyRef, updatedProduct);
           
-          const stockUpdate: StockUpdate = {
-            date: currentDate,
-            previous_stock: currentStock,
-            new_stock: addStockValue,
-            current_stock: newTotalStock,
-            updated_by: 'admin'
-          };
-          
-          batch.update(historyRef, {
-            stock_history: arrayUnion(stockUpdate)
-          });
-          
-          return batch;
-        })
-      );
+          // Add stock update to history if stock was added
+          if (addStockValue !== 0) {
+            const stockUpdate: StockUpdate = {
+              date: currentDate,
+              previous_stock: currentStock,
+              new_stock: addStockValue,
+              current_stock: newTotalStock,
+              updated_by: 'admin'
+            };
+            
+            batch.update(historyRef, {
+              stock_history: arrayUnion(stockUpdate)
+            });
+          }
+        }
+        
+        return batch;
+      })
+    );
 
-      await batch.commit();
+    await batch.commit();
 
-      // Update local products array
-      const index = this.products.findIndex(p => p.product_id === this.editingProduct!.product_id);
-      if (index !== -1) {
-        this.products[index] = updatedProduct;
-      }
-      this.filterProducts();
-
-      if (addStockValue > 0) {
-        this.showToast(`Product updated successfully. Added ${addStockValue} units to stock. New total: ${newTotalStock}`);
-      } else {
-        this.showToast('Product details updated successfully');
-      }
-      
-      this.cancelEdit();
-    } catch (error) {
-      console.error('Error updating product:', error);
-      this.showToast('Unable to update product. Please try again');
-    } finally {
-      this.isSubmitting = false;
+    // Update local products array
+    const index = this.products.findIndex(p => p.product_id === this.editingProduct!.product_id);
+    if (index !== -1) {
+      this.products[index] = updatedProduct;
     }
+    this.filterProducts();
+
+    // Show appropriate success message
+    let message = 'Product details updated successfully';
+    if (addStockValue > 0) {
+      message = `Product updated successfully. Added ${addStockValue} units to stock. New total: ${newTotalStock}`;
+    } else if (addStockValue < 0) {
+      message = `Product updated successfully. Removed ${Math.abs(addStockValue)} units from stock. New total: ${newTotalStock}`;
+    }
+    
+    if (!historyDoc?.exists) {
+      message += ' (Note: Stock history tracking not available for this product)';
+    }
+    
+    this.showToast(message);
+    this.cancelEdit();
+  } catch (error) {
+    console.error('Error updating product:', error);
+    this.showToast('Unable to update product. Please try again');
+  } finally {
+    this.isSubmitting = false;
   }
+}
 
   /**
    * Delete product from both collections
    */
   async deleteProduct(product: Product) {
     try {
-      const batch = this.firestore.firestore.batch();
-      
-      // Delete from main products collection
-      const productsRef = this.firestore.collection('products').doc(product.product_id.toString()).ref;
-      batch.delete(productsRef);
-      
-      // Delete from products_history collection
-      const historyRef = this.firestore.collection('products_history').doc(product.product_id.toString()).ref;
-      batch.delete(historyRef);
+      const batch = await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, async () => {
+          const batch = this.firestore.firestore.batch();
+          
+          // Delete from main products collection
+          const productsRef = this.firestore.collection('products').doc(product.product_id.toString()).ref;
+          batch.delete(productsRef);
+          
+          // Delete from products_history collection
+          const historyRef = this.firestore.collection('products_history').doc(product.product_id.toString()).ref;
+          batch.delete(historyRef);
+          
+          return batch;
+        })
+      );
 
-      await batch.commit();
+      await this.ngZone.run(() =>
+        runInInjectionContext(this.injector, () => batch.commit())
+      );
 
       // Update local products array
       this.products = this.products.filter(p => p.product_id !== product.product_id);

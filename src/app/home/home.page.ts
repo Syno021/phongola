@@ -174,18 +174,21 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   increaseQuantity(product: Product) {
-    if (product.stock_quantity <= 0) {
-      this.presentToast('Sorry, this item is currently out of stock');
-      return;
-    }
-    
-    const currentQty = this.tempQuantities.get(product.product_id) || 0;
-    if (currentQty < product.stock_quantity) {
-      this.tempQuantities.set(product.product_id, currentQty + 1);
-    } else {
-      this.presentToast(`Sorry, we only have ${product.stock_quantity} items left in stock`);
-    }
+  if (product.stock_quantity <= 0) {
+    this.presentToast('Sorry, this item is currently out of stock');
+    return;
   }
+  
+  const currentTempQty = this.tempQuantities.get(product.product_id) || 0;
+  const currentCartQty = this.getCartQuantity(product.product_id);
+  const totalQtyWouldBe = currentTempQty + currentCartQty + 1;
+  
+  if (totalQtyWouldBe <= product.stock_quantity) {
+    this.tempQuantities.set(product.product_id, currentTempQty + 1);
+  } else {
+    this.presentToast(`Sorry, you can only buy ${product.stock_quantity} of this item. You already have ${currentCartQty} in your cart.`);
+  }
+}
 
   decreaseQuantity(product: Product) {
     const currentQty = this.tempQuantities.get(product.product_id) || 0;

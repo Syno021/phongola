@@ -49,24 +49,44 @@ export class CartService {
     this.cartItemsSubject.next(cartMap);
   }
 
-  addToCart(product: Product, stock_quantity: number) {
-    if (stock_quantity <= 0) return; // Don't add zero or negative quantities
-   
-    const currentCart = new Map(this.cartItemsSubject.value);
-    const currentQty = currentCart.get(product.product_id) || 0;
-    currentCart.set(product.product_id, currentQty + stock_quantity);
-    this.saveCart(currentCart);
-  }
-
-  updateQuantity(productId: string, stock_quantity: number) {
-    const currentCart = new Map(this.cartItemsSubject.value);
-    if (stock_quantity <= 0) {
-      currentCart.delete(productId); // Remove if quantity is zero or negative
+  async addToCart(product: Product, quantityToAdd: number) {
+  if (quantityToAdd <= 0) return; // Don't add zero or negative quantities
+  
+  const currentCart = new Map(this.cartItemsSubject.value);
+  const currentQtyInCart = currentCart.get(product.product_id) || 0;
+  const totalQtyWouldBe = currentQtyInCart + quantityToAdd;
+  
+  // Check if total quantity would exceed stock
+  if (totalQtyWouldBe > product.stock_quantity) {
+    const availableToAdd = product.stock_quantity - currentQtyInCart;
+    if (availableToAdd > 0) {
+      // Add only what's available
+      currentCart.set(product.product_id, product.stock_quantity);
+      this.saveCart(currentCart);
+      throw new Error(`Only ${availableToAdd} more items could be added. You now have ${product.stock_quantity} in your cart.`);
     } else {
-      currentCart.set(productId, stock_quantity);
+      throw new Error(`Cannot add more items. You already have the maximum quantity (${product.stock_quantity}) in your cart.`);
     }
-    this.saveCart(currentCart);
   }
+  
+  currentCart.set(product.product_id, totalQtyWouldBe);
+  this.saveCart(currentCart);
+}
+
+  async updateQuantity(productId: string, newQuantity: number, maxStock?: number) {
+  const currentCart = new Map(this.cartItemsSubject.value);
+  
+  if (newQuantity <= 0) {
+    currentCart.delete(productId); // Remove if quantity is zero or negative
+  } else {
+    // If maxStock is provided, check against it
+    if (maxStock && newQuantity > maxStock) {
+      throw new Error(`Cannot set quantity to ${newQuantity}. Maximum available stock is ${maxStock}.`);
+    }
+    currentCart.set(productId, newQuantity);
+  }
+  this.saveCart(currentCart);
+}
 
   removeFromCart(productId: string) {
     const currentCart = new Map(this.cartItemsSubject.value);
